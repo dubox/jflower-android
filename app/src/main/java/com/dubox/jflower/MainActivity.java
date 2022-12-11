@@ -243,14 +243,17 @@ public class MainActivity extends AppCompatActivity {
 
         Log.i("img",data.getPath());
         try {
+            FileInputStream fis = new FileInputStream(data.getPath());Log.i("fis.available()",fis.available()+"");
             deviceSend( ip , "file",
-            new StreamBody( new FileInputStream(data.getPath()) ,-1)
+            new StreamBody(fis  ,fis.available())
             );
         } catch (FileNotFoundException e) {
             Log.i("send","11");
             e.printStackTrace();
             handler.sendEmptyMessage(10);
             return;
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     public void deviceSendText(String ip,String data) {
@@ -267,6 +270,7 @@ public class MainActivity extends AppCompatActivity {
         AsyncHttpRequest req = new AsyncHttpRequest(Uri.parse(uri), "POST")
                     //.setTimeout(5000)
                     .setHeader("Content-Type", "application/x-www-form-urlencoded")
+                    .setHeader("Content-Length", body.length()+"")
                     .setHeader("cmd", type)
                     .setHeader("ip", localIp)
                     .setHeader("id", localId)
@@ -276,6 +280,9 @@ public class MainActivity extends AppCompatActivity {
         req.setBody(body);Log.i("headers",req.getHeaders().toString());
 
             AsyncHttpClient.getDefaultInstance().executeString(req, new AsyncHttpClient.StringCallback() {
+
+
+
                 // Callback is invoked with any exceptions/errors, and the result, if available.
                 @Override
                 public void onCompleted(Exception e, AsyncHttpResponse response, String result) {
@@ -330,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
                 waitingText = intent.getStringExtra(Intent.EXTRA_TEXT);
                 sharingType = "Text";
             }
-
+///external/images/media/269507
             if(Objects.equals(type, "image/*") || true){
                 waitingImage = intent.getParcelableExtra(Intent.EXTRA_STREAM);
                 Log.i("image/*",waitingImage.toString());
