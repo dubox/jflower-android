@@ -6,7 +6,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.ConnectivityManager;
+import android.net.DhcpInfo;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.net.wifi.WifiInfo;
@@ -14,6 +16,7 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.ArrayMap;
 import android.util.Log;
@@ -37,6 +40,8 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
+import permison.PermissonUtil;
+import permison.listener.PermissionListener;
 
 import com.dubox.jflower.databinding.ActivityMainBinding;
 import com.koushikdutta.async.ByteBufferList;
@@ -52,16 +57,26 @@ import com.koushikdutta.async.http.body.StringBody;
 import com.koushikdutta.async.http.callback.HttpConnectCallback;
 import com.koushikdutta.async.http.server.UnknownRequestBody;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -71,8 +86,9 @@ public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration mAppBarConfiguration;
     private ActivityMainBinding binding;
 
+    public ListView deviceListV;
     protected List<HashMap<String, Object>> deviceDataList = new ArrayList<>();
-    protected SimpleAdapter adapter;
+    public SimpleAdapter adapter;
 
     protected Handler handler;
 
@@ -82,9 +98,10 @@ public class MainActivity extends AppCompatActivity {
 
     protected String[] toastMsg = new String[]{"发送失败","发送成功"};
 
-    protected String waitingText = "";
-    protected Uri waitingImage;
-    protected String sharingType = "";
+    public String waitingText = "";
+    public Uri waitingImage;
+    public String sharingType = "";
+    private boolean deviceListCleared = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,12 +111,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         setSupportActionBar(binding.appBarMain.toolbar);
-        binding.appBarMain.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                deviceDetect();
-            }
-        });
+
         DrawerLayout drawer = binding.drawerLayout;
         NavigationView navigationView = binding.navView;
         // Passing each menu ID as a set of Ids because each
@@ -123,9 +135,6 @@ public class MainActivity extends AppCompatActivity {
         localName = Settings.Secure.getString(getContentResolver(), "bluetooth_name");Log.i("localName",localName);
 
 
-        this.handleShare();
-
-        Log.i("ip", localIp = localIp());
 
         //创建SimpleAdapter适配器将数据绑定到item显示控件上
         adapter = new SimpleAdapter(
@@ -135,21 +144,51 @@ public class MainActivity extends AppCompatActivity {
                 new String[]{"name"},
                 new int[]{R.id.device_name});
         //实现列表的显示
-        ListView deviceListV = this.findViewById(R.id.device_list);
-        deviceListV.setAdapter(adapter);
-        deviceListV.setOnItemClickListener((adapterView, view, i, l) -> {
-            HashMap<String,Object> map =  (HashMap<String, Object>) adapterView.getItemAtPosition(i);
-            switch (sharingType){
-                case "Text":
-                    deviceSendText(map.get("name").toString() ,waitingText);
-                    break;
-                case "Image":
-                    deviceSendImg(map.get("name").toString() ,waitingImage);
-                    break;
+//        deviceListV = this.findViewById(R.id.device_list);
+
+
+
+
+        handleShare();
+
+        Log.i("ip", localIp = localIp());
+
+        initHandler();
+        deviceDetect();
+        PermissonUtil.checkPermission(MainActivity.this, new PermissionListener() {
+            @Override
+            public void havePermission() {
+                Toast.makeText(MainActivity.this, "获取成功", Toast.LENGTH_SHORT).show();
             }
 
-        });
-        deviceDetect();
+            @Override
+            public void requestPermissionFail() {
+                Toast.makeText(MainActivity.this, "获取失败", Toast.LENGTH_SHORT).show();
+            }
+        }, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE});
+
+        Log.i("main", "mainmainmainmainmain");
+    }
+
+    public void setAdapter(){
+        deviceListV.setAdapter(adapter);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+//        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        return NavigationUI.navigateUp(navController, mAppBarConfiguration)
+                || super.onSupportNavigateUp();
+    }
+
+    protected void initHandler(){
         handler = new Handler() {
             public void handleMessage(Message msg) {
                 switch (msg.what) {
@@ -164,20 +203,6 @@ public class MainActivity extends AppCompatActivity {
 
             }
         };
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        return NavigationUI.navigateUp(navController, mAppBarConfiguration)
-                || super.onSupportNavigateUp();
     }
 
     protected String settingGet(String name ,String def){
@@ -199,9 +224,21 @@ public class MainActivity extends AppCompatActivity {
         return setting.edit().putString(name, value).commit();
     }
 
-    protected void deviceDetect() {
+    protected void clearDeviceList(){
+        if(!deviceListCleared)return;
+        deviceListCleared = false;
+        HashMap<String, Object> item = new HashMap<>();
+        item.put("name", "未检测到设备");
 
-        deviceDataList.clear();
+        deviceDataList.add(item);
+    }
+
+    public void deviceDetect() {
+        clearDeviceList();
+        if(localIp.equals("")){
+            Toast.makeText(getApplicationContext(),"没有检测到本机IP，请确定已连接到局域网" , Toast.LENGTH_LONG).show();
+            return;
+        }
         String ipSeg = localIp.replaceFirst("\\d+$", "");
         Log.i("ipSeg", ipSeg);
         for (int i = 0; i < 256; i++) {
@@ -210,7 +247,7 @@ public class MainActivity extends AppCompatActivity {
             String uri = String.format("http://%s:8891/detect", ip);
 
             AsyncHttpClient.getDefaultInstance().executeString(new AsyncHttpRequest(Uri.parse(uri), "GET")
-                    .setTimeout(7000)
+                    .setTimeout(10000)
                     .setHeader("cmd", "detect")
                     .setHeader("ip", localIp)
                     .setHeader("id", localId)
@@ -219,15 +256,20 @@ public class MainActivity extends AppCompatActivity {
                 // Callback is invoked with any exceptions/errors, and the result, if available.
                 @Override
                 public void onCompleted(Exception e, AsyncHttpResponse response, String result) {
-                    Log.i("uri1", uri);
+                    //Log.i("uri1", uri);
                     if (e != null ) {
-                        if(ip.equals("192.168.8.111")){
-                            e.printStackTrace();
-                        }
+//                        if(ip.equals("192.168.1.102")){
+//                            e.printStackTrace();
+//                        }
                         return;
                     }
                     HashMap<String, Object> item = new HashMap<>();
                     item.put("name", ip);
+                    if(!deviceListCleared){
+                        deviceDataList.clear();
+                        deviceListCleared = true;
+                    }
+//                    deviceDataList.add(item);
                     deviceDataList.add(item);
                     handler.sendEmptyMessage(1);
                     Log.i("uri", uri);
@@ -241,11 +283,22 @@ public class MainActivity extends AppCompatActivity {
 
     public void deviceSendImg(String ip,Uri data) {
 
-        Log.i("img",data.getPath());
+        String fPath = data.getPath();
+        if(fPath.startsWith("/external/")){
+            fPath = getPathForMedia(data.toString());
+        }
+        Log.i("file",fPath);
+        Log.i("getLastPathSegment",Uri.parse(fPath).getLastPathSegment());
+
         try {
-            FileInputStream fis = new FileInputStream(data.getPath());Log.i("fis.available()",fis.available()+"");
+            FileInputStream fis = new FileInputStream(fPath);
+            Log.i("fis.available()",fis.available()+"");
+            HashMap<String,Object> map = new HashMap<String,Object>();
+            map.put("file_name",Uri.parse(fPath).getLastPathSegment());
+
             deviceSend( ip , "file",
-            new StreamBody(fis  ,fis.available())
+            new StreamBody(fis  ,fis.available()),
+                    map
             );
         } catch (FileNotFoundException e) {
             Log.i("send","11");
@@ -263,7 +316,11 @@ public class MainActivity extends AppCompatActivity {
             );
     }
 
-    protected void deviceSend(String ip ,String type,AsyncHttpRequestBody body) {
+    protected void deviceSend(String ip ,String type,AsyncHttpRequestBody body  ) {
+        deviceSend(ip ,type,body,new HashMap<>());
+    }
+
+    protected void deviceSend(String ip ,String type,AsyncHttpRequestBody body ,HashMap<String, Object> options ) {
 
             String uri = String.format("http://%s:8891/%s", ip ,type);
 
@@ -277,6 +334,9 @@ public class MainActivity extends AppCompatActivity {
                     .setHeader("name",urlEncode(localName))
                     //.setHeader("file_name",urlEncode(localName))
                     .setHeader("findingCode", "");
+        options.forEach((key, value) -> {
+            req.setHeader(key ,value.toString());
+        });
         req.setBody(body);Log.i("headers",req.getHeaders().toString());
 
             AsyncHttpClient.getDefaultInstance().executeString(req, new AsyncHttpClient.StringCallback() {
@@ -317,6 +377,32 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+//        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+//        DhcpInfo info=wifiManager.getDhcpInfo();
+//        System.out.println(info.serverAddress);
+//        getWifiApState();
+//        printHotIp();
+        return getLocalIpAddress();
+//        return "";
+    }
+
+    public String getLocalIpAddress() {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && inetAddress.getHostAddress().startsWith("192.168.")) {
+                        Log.d("IPs", inetAddress.getHostAddress() );
+                        Log.d("IPs", intf.getName() );
+                        return inetAddress.getHostAddress();
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            Log.e("SocketException", ex.toString());
+        }
         return "";
     }
 
@@ -324,6 +410,8 @@ public class MainActivity extends AppCompatActivity {
     {
         return String.format("%d.%d.%d.%d",ip&0x000000ff,(ip&0x0000ff00)>>8,(ip&0x00ff0000)>>16,(ip&0xff000000)>>24);
     }
+
+
 
     private void handleShare(){
         Intent intent=getIntent();
@@ -337,9 +425,15 @@ public class MainActivity extends AppCompatActivity {
                 waitingText = intent.getStringExtra(Intent.EXTRA_TEXT);
                 sharingType = "Text";
             }
-///external/images/media/269507
-            if(Objects.equals(type, "image/*") || true){
+
+// /external/images/media/269507
+            // /storage/emulated/0/DCIM/Camera/IMG_20220531_101158R.jpg
+//            if()
+            else {
+                //application/vnd.android.package-archive
                 waitingImage = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                //getPathForMedia(waitingImage.toString());
+//                getPathForMedia(waitingImage.getPath());
                 Log.i("image/*",waitingImage.toString());
                 Log.i("getPath",waitingImage.getPath());
                 sharingType = "Image";
@@ -353,6 +447,24 @@ public class MainActivity extends AppCompatActivity {
 //
 //            }
         }
+    }
+
+
+    public String getPathForMedia(String meidaUrl){
+        Uri uri = Uri.parse(meidaUrl);
+
+        String[] proj = { MediaStore.Images.Media.DATA };
+        Cursor actualimagecursor = getContentResolver().query(uri,proj,null,null,null);
+        int actual_image_column_index = actualimagecursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+        actualimagecursor.moveToFirst();
+
+        String img_path = actualimagecursor.getString(actual_image_column_index);
+Log.i("img_path",img_path);
+        return img_path;
+//        File file = new File(img_path);
+//
+//        Uri fileUri = Uri.fromFile(file);
+//        Log.i("fileUri",fileUri.toString());
     }
 
     public String md5(String info)
@@ -395,5 +507,6 @@ public class MainActivity extends AppCompatActivity {
             return str;
         }
     }
+
 
 }

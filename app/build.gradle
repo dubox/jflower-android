@@ -29,6 +29,7 @@ android {
     buildFeatures {
         viewBinding true
     }
+
 }
 
 dependencies {
@@ -44,4 +45,5 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     implementation 'com.koushikdutta.async:androidasync:3.+'
+    implementation 'com.github.tyhjh:PermissionUtil:v1.0.7'
 }
