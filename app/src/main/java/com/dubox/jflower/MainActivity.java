@@ -158,12 +158,12 @@ public class MainActivity extends AppCompatActivity {
         PermissonUtil.checkPermission(MainActivity.this, new PermissionListener() {
             @Override
             public void havePermission() {
-                Toast.makeText(MainActivity.this, "获取成功", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(MainActivity.this, "获取成功", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void requestPermissionFail() {
-                Toast.makeText(MainActivity.this, "获取失败", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "授权失败", Toast.LENGTH_SHORT).show();
             }
         }, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE});
 
