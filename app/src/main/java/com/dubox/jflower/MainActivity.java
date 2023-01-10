@@ -29,6 +29,7 @@ import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
+import com.dubox.jflower.libs.ClipBoardUtil;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 
@@ -168,6 +169,23 @@ public class MainActivity extends AppCompatActivity {
         }, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE});
 
         Log.i("main", "mainmainmainmainmain");
+    }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        getClipboardData();
+    }
+
+    private void getClipboardData() {
+        this.getWindow().getDecorView().post(new Runnable() {
+            @Override
+            public void run() {
+                //把获取到的内容打印出来
+                Log.i("paste", ClipBoardUtil.paste());
+            }
+        });
     }
 
     public void setAdapter(){
