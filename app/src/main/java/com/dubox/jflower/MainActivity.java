@@ -93,6 +93,9 @@ public class MainActivity extends AppCompatActivity {
 
     protected Handler handler;
 
+    protected enum Act {SHARE ,PASTE ,NONE;}
+    protected Act act = Act.NONE;
+
     protected String localIp = "";
     protected String localId = "";
     protected String localName = "";
@@ -172,9 +175,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+
     @Override
     protected void onResume() {
         super.onResume();
+//        act = Act.NONE;
+        Log.i("onResume", "000000000000");
         getClipboardData();
     }
 
@@ -183,7 +189,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 //把获取到的内容打印出来
-                Log.i("paste", ClipBoardUtil.paste());
+                if(act == Act.NONE){
+                    act = Act.PASTE;
+                    Log.i("paste", ClipBoardUtil.paste());
+                }
             }
         });
     }
@@ -432,10 +441,13 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void handleShare(){
+
         Intent intent=getIntent();
         String action=intent.getAction();
         String type=intent.getType();
         if(action.equals(Intent.ACTION_SEND)){
+            act = Act.SHARE;
+            Log.i("handleShare","111111111111");
             Log.i("type",type);
             if(Objects.equals(type, "text/plain")){
 
