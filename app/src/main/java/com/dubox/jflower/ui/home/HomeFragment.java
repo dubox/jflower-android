@@ -61,10 +61,10 @@ public class HomeFragment extends Fragment {
         deviceListV.setOnItemClickListener((adapterView, view, i, l) -> {
             HashMap<String,Object> map =  (HashMap<String, Object>) adapterView.getItemAtPosition(i);
             switch (mainActivity.sharingType){
-                case "Text":
+                case TEXT:
                     mainActivity.deviceSendText(map.get("name").toString() ,mainActivity.waitingText);
                     break;
-                case "Image":
+                case IMAGE:
                     mainActivity.deviceSendImg(map.get("name").toString() ,mainActivity.waitingImage);
                     break;
             }

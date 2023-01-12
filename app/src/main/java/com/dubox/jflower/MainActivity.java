@@ -104,12 +104,14 @@ public class MainActivity extends AppCompatActivity {
 
     public String waitingText = "";
     public Uri waitingImage;
-    public String sharingType = "";
+    public enum SharingType {TEXT,IMAGE,NONE;}
+    public SharingType sharingType = SharingType.NONE;
     private boolean deviceListCleared = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.i("onCreate", "22222222222222222");
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -151,14 +153,10 @@ public class MainActivity extends AppCompatActivity {
 //        deviceListV = this.findViewById(R.id.device_list);
 
 
-
-
-        handleShare();
-
         Log.i("ip", localIp = localIp());
 
         initHandler();
-        deviceDetect();
+
         PermissonUtil.checkPermission(MainActivity.this, new PermissionListener() {
             @Override
             public void havePermission() {
@@ -179,20 +177,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-//        act = Act.NONE;
         Log.i("onResume", "000000000000");
+        deviceDetect();
+        act = Act.NONE;
+        handleShare();
         getClipboardData();
     }
 
     private void getClipboardData() {
+        if(act != Act.NONE)return;
         this.getWindow().getDecorView().post(new Runnable() {
             @Override
             public void run() {
-                //把获取到的内容打印出来
-                if(act == Act.NONE){
                     act = Act.PASTE;
                     Log.i("paste", ClipBoardUtil.paste());
-                }
+                    sharingType = SharingType.TEXT;
+                    waitingText = ClipBoardUtil.paste();
+
             }
         });
     }
@@ -274,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
             String uri = String.format("http://%s:8891/detect", ip);
 
             AsyncHttpClient.getDefaultInstance().executeString(new AsyncHttpRequest(Uri.parse(uri), "GET")
-                    .setTimeout(10000)
+                    .setTimeout(15000)
                     .setHeader("cmd", "detect")
                     .setHeader("ip", localIp)
                     .setHeader("id", localId)
@@ -310,8 +311,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void deviceSendImg(String ip,Uri data) {
 
-        String fPath = data.getPath();
-        if(fPath.startsWith("/external/")){
+        String fPath = data.getPath();//todo 支持从其他app分享，如谷歌浏览器
+        if(data.toString().startsWith("content:")){
             fPath = getPathForMedia(data.toString());
         }
         Log.i("file",fPath);
@@ -336,6 +337,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
     public void deviceSendText(String ip,String data) {
 
             deviceSend( ip , "text",
@@ -453,7 +455,7 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.i("text/plain","ttt:"+intent.getStringExtra(Intent.EXTRA_TEXT));
                 waitingText = intent.getStringExtra(Intent.EXTRA_TEXT);
-                sharingType = "Text";
+                sharingType = SharingType.TEXT;
             }
 
 // /external/images/media/269507
@@ -466,7 +468,7 @@ public class MainActivity extends AppCompatActivity {
 //                getPathForMedia(waitingImage.getPath());
                 Log.i("image/*",waitingImage.toString());
                 Log.i("getPath",waitingImage.getPath());
-                sharingType = "Image";
+                sharingType = SharingType.IMAGE;
             }
 
 
