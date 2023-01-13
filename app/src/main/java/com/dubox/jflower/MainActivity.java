@@ -64,6 +64,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -311,15 +312,16 @@ public class MainActivity extends AppCompatActivity {
 
     public void deviceSendImg(String ip,Uri data) {
 
-        String fPath = data.getPath();//todo 支持从其他app分享，如谷歌浏览器
-        if(data.toString().startsWith("content:")){
+        String fPath = data.getPath();
+        if(fPath.startsWith("/external/")){
             fPath = getPathForMedia(data.toString());
         }
         Log.i("file",fPath);
         Log.i("getLastPathSegment",Uri.parse(fPath).getLastPathSegment());
 
         try {
-            FileInputStream fis = new FileInputStream(fPath);
+//            FileInputStream fis = new FileInputStream(fPath);
+            InputStream fis = getContentResolver().openInputStream(data);
             Log.i("fis.available()",fis.available()+"");
             HashMap<String,Object> map = new HashMap<String,Object>();
             map.put("file_name",Uri.parse(fPath).getLastPathSegment());
@@ -469,6 +471,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.i("image/*",waitingImage.toString());
                 Log.i("getPath",waitingImage.getPath());
                 sharingType = SharingType.IMAGE;
+
             }
 
 
