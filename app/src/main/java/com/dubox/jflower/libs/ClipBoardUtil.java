@@ -29,6 +29,14 @@ public class ClipBoardUtil {
         return "";
     }
 
+    public static void copy(String text){
+        // 获取剪贴板管理器
+        ClipboardManager clipboard = (ClipboardManager) ActivityManager.getTopActivity().getSystemService(Context.CLIPBOARD_SERVICE);
+
+        ClipData clip = ClipData.newPlainText("text", text);
+        clipboard.setPrimaryClip(clip);
+    }
+
     /**
      * 清空剪切板
      */

@@ -159,19 +159,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
-        AsyncHttpServer server = new AsyncHttpServer();
 
-        List<WebSocket> _sockets = new ArrayList<WebSocket>();
-
-        server.get("/", new HttpServerRequestCallback() {
-            @Override
-            public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
-                response.send("Hello!!!");
-            }
-        });
-
-// listen on port 5000
-        server.listen(8891);
     }
 
 

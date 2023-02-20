@@ -50,6 +50,13 @@
             android:name=".HttpService"
             android:enabled="true"
             android:exported="false" />
+        <receiver
+            android:name=".MyBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.dubox.jflower.ACTION_COPY"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
