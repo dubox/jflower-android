@@ -11,13 +11,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
+import android.provider.MediaStore;
+import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.dubox.jflower.libs.ClipBoardUtil;
+import com.dubox.jflower.libs.Utils;
 import com.koushikdutta.async.ByteBufferList;
 import com.koushikdutta.async.DataEmitter;
 import com.koushikdutta.async.callback.CompletedCallback;
@@ -31,8 +37,12 @@ import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
+import org.greenrobot.eventbus.EventBus;
+
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import androidx.annotation.RequiresApi;
@@ -40,7 +50,14 @@ import androidx.appcompat.widget.ThemeUtils;
 import androidx.core.app.NotificationCompat;
 
 public class HttpService extends Service {
+
+    AsyncHttpServer server = new AsyncHttpServer();
+
+    Uri receivedImg;
+
     public HttpService() {
+
+        EventBus.getDefault().register(new MySubscriber());
     }
 
     @Override
@@ -82,7 +99,8 @@ public class HttpService extends Service {
     private NotificationCompat.Action getAction(){
         // 创建一个 Intent ，用于点击操作按钮时触发
         Intent intent = new Intent(this, MyBroadcastReceiver.class);
-        intent.setAction(MyBroadcastReceiver.ACTION_COPY);
+        intent.setAction(MyBroadcastReceiver.ACTION_COPY)
+                .setData(receivedImg);//TODO 这里set时receivedImg还是空的
 
 // 创建一个 PendingIntent ，用于在通知中添加操作按钮
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
@@ -124,19 +142,20 @@ public class HttpService extends Service {
         stopServer();
         // 移除通知
         stopForeground(true);
+        EventBus.getDefault().unregister(new MySubscriber());
         super.onDestroy();
     }
 
     private void startServer() {
         // Create and start your HTTP server here
-        AsyncHttpServer server = new AsyncHttpServer();
 
-        server.get("/.*", new HttpServerRequestCallback() {
+
+        server.get("/detect", new HttpServerRequestCallback() {
             @Override
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
                 if(request.getPath().equals("/detect")){
-                    response.getHeaders().set("id","test111");
-                    response.getHeaders().set("name","test");
+                    response.getHeaders().set("id", Utils.getId());
+                    response.getHeaders().set("name",Utils.getName());
                 }
                 response.send("jFlower (局发) is running ...");
             }
@@ -149,27 +168,50 @@ public class HttpService extends Service {
 
                 switch (request.getPath()){
                     case "/text":{
+                        String res = request.getBody().get().toString();
+                        Log.i("/text",res);
 
-                        Log.i("ssss",request.getBody().get().toString());
-                        // 获取剪贴板管理器
-                        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-
-                        ClipData clip = ClipData.newPlainText("text", request.getBody().get().toString());
-                        clipboard.setPrimaryClip(clip);
-//                        Toast.makeText(HttpService.this, "已复制到剪贴板", Toast.LENGTH_SHORT).show();
+                        ClipBoardUtil.copy(res,HttpService.this);
+                        toast("接收到文本，已复制到剪贴板");
                         break;
                     }
+                    case "/img":{
+                        String res = request.getBody().get().toString();
+                        Log.i("/img",res);
+                        // 将 base64 字符串解码成字节数组
+                        byte[] bytes = Base64.decode(res.replaceFirst("^data:.*base64,",""), Base64.DEFAULT);
+                        // 将字节数组转换为 Bitmap 对象
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                        // 获取相册保存的路径
+                        String savedImagePath = MediaStore.Images.Media.insertImage(
+                                getContentResolver(),
+                                bitmap,
+                                "jFlower-"+(new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())),
+                                "From "+request.getHeaders().get("ip")
+                        );
+                        // 如果保存成功，则返回图像的 URI
+                        if (savedImagePath != null) {
+                            receivedImg = Uri.parse(savedImagePath);
+                            toast("接收到图片，已保存到相册");
+                        } else {
+                            toast("接收到图片，保存失败");
+                        }
+                    }
                 }
-                response.send("jFlower (局发) is running ...");
+                response.end();
             }
         });
 
-// listen on port 5000
         server.listen(8891);
+    }
+
+    private void toast(String msg){
+        EventBus.getDefault().post(new  MessageEvent(HttpService.this,MessageEvent.EVENT_TOAST, msg));
     }
 
     private void stopServer() {
         // Stop your HTTP server here
+        server.stop();
     }
 
 

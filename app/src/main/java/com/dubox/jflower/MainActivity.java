@@ -25,6 +25,8 @@ import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
 import com.dubox.jflower.libs.ClipBoardUtil;
+import com.dubox.jflower.libs.Utils;
+import com.dubox.jflower.libs.utilsTrait.Net;
 import com.google.android.material.navigation.NavigationView;
 
 import androidx.annotation.RequiresApi;
@@ -121,8 +123,8 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        localId = settingGet("localId",md5(System.currentTimeMillis()+""));Log.i("localId",localId);
-        localName = Settings.Secure.getString(getContentResolver(), "bluetooth_name");Log.i("localName",localName);
+        localId = Utils.getId();Log.i("localId",localId);
+        localName = Utils.getName();Log.i("localName",localName);
 
 
 
@@ -137,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
 //        deviceListV = this.findViewById(R.id.device_list);
 
 
-        Log.i("ip", localIp = localIp());
+        freshIp();
 
         initHandler();
 
@@ -230,24 +232,6 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    protected String settingGet(String name ,String def){
-        SharedPreferences setting = getSharedPreferences("com.dubox.jflower", 0);
-
-        String v = setting.getString(name, "");
-        if(v == ""){
-            setting.edit().putString(name, def).commit();
-        }
-        return setting.getString(name, "");
-    }
-
-    protected String settingGet(String name ){
-        return settingGet(name ,"");
-    }
-
-    protected Boolean settingSet(String name ,String value ){
-        SharedPreferences setting = getSharedPreferences("com.dubox.jflower", 0);
-        return setting.edit().putString(name, value).commit();
-    }
 
     protected void clearDeviceList(){
         if(!deviceListCleared)return;
@@ -259,6 +243,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void deviceDetect() {
+        freshIp();
         clearDeviceList();
         if(localIp.equals("")){
             Toast.makeText(getApplicationContext(),"没有检测到本机IP，请确定已连接到局域网" , Toast.LENGTH_LONG).show();
@@ -387,58 +372,9 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-
-    protected String localIp() {
-
-        ConnectivityManager connManager = (ConnectivityManager) this.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo wifiInfo = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);//.getActiveNetworkInfo();//
-
-        if (null != wifiInfo) {
-            NetworkInfo.State state = wifiInfo.getState();
-            if (null != state) {
-                if (state == NetworkInfo.State.CONNECTED || state == NetworkInfo.State.CONNECTING) {
-
-                    WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-                    WifiInfo connInfo = wifiManager.getConnectionInfo();
-                    return formatIp(connInfo.getIpAddress());
-                }
-            }
-        }
-//        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-//        DhcpInfo info=wifiManager.getDhcpInfo();
-//        System.out.println(info.serverAddress);
-//        getWifiApState();
-//        printHotIp();
-        return getLocalIpAddress();
-//        return "";
+    void freshIp(){
+        Log.i("ip", localIp = Net.localIp(this));
     }
-
-    public String getLocalIpAddress() {
-        try {
-            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-                NetworkInterface intf = en.nextElement();
-
-                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
-                    InetAddress inetAddress = enumIpAddr.nextElement();
-                    if (!inetAddress.isLoopbackAddress() && inetAddress.getHostAddress().startsWith("192.168.")) {
-                        Log.d("IPs", inetAddress.getHostAddress() );
-                        Log.d("IPs", intf.getName() );
-                        return inetAddress.getHostAddress();
-                    }
-                }
-            }
-        } catch (SocketException ex) {
-            Log.e("SocketException", ex.toString());
-        }
-        return "";
-    }
-
-    protected String formatIp( int ip)
-    {
-        return String.format("%d.%d.%d.%d",ip&0x000000ff,(ip&0x0000ff00)>>8,(ip&0x00ff0000)>>16,(ip&0xff000000)>>24);
-    }
-
-
 
     private void handleShare(){
 
@@ -498,38 +434,6 @@ Log.i("img_path",img_path);
 //        Log.i("fileUri",fileUri.toString());
     }
 
-    public String md5(String info)
-    {
-        try
-        {
-            MessageDigest md5 = MessageDigest.getInstance("MD5");
-            md5.update(info.getBytes("UTF-8"));
-            byte[] encryption = md5.digest();
-
-            StringBuffer strBuf = new StringBuffer();
-            for (int i = 0; i < encryption.length; i++)
-            {
-                if (Integer.toHexString(0xff & encryption[i]).length() == 1)
-                {
-                    strBuf.append("0").append(Integer.toHexString(0xff & encryption[i]));
-                }
-                else
-                {
-                    strBuf.append(Integer.toHexString(0xff & encryption[i]));
-                }
-            }
-
-            return strBuf.toString();
-        }
-        catch (NoSuchAlgorithmException e)
-        {
-            return "";
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            return "";
-        }
-    }
 
     public String urlEncode(String str){
         try {

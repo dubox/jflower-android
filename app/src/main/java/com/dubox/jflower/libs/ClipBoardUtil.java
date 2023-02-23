@@ -30,8 +30,12 @@ public class ClipBoardUtil {
     }
 
     public static void copy(String text){
+        copy(text ,ActivityManager.getTopActivity());
+    }
+
+    public static void copy(String text ,Context context){
         // 获取剪贴板管理器
-        ClipboardManager clipboard = (ClipboardManager) ActivityManager.getTopActivity().getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
 
         ClipData clip = ClipData.newPlainText("text", text);
         clipboard.setPrimaryClip(clip);
