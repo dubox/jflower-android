@@ -24,16 +24,17 @@ import static androidx.core.content.ContextCompat.startActivity;
 
 public class MyBroadcastReceiver extends BroadcastReceiver {
 
-    public static final String ACTION_COPY = "com.dubox.jflower.ACTION_COPY";
+    public static final String ACTION_IMG = "com.dubox.jflower.ACTION_IMG";
+    public static final String ACTION_TEXT = "com.dubox.jflower.ACTION_TEXT";
 
     @Override
     public void onReceive(Context context, Intent intent) {
 //
         Log.i("MyBroadcastReceiver",intent.getAction());
-        if (intent.getAction().equals(ACTION_COPY)) {
+        if (intent.getAction().equals(ACTION_IMG)) {
             File imageFile = null;
             try {
-                Log.i("imgUri",intent.getData().toString());
+//                Log.i("imgUri",intent.getData().toString());
             // 打开输入流，读取相册图片数据
             InputStream inputStream = context.getContentResolver().openInputStream(intent.getData());
             byte[] imageBytes = IOUtils.toByteArray(inputStream);

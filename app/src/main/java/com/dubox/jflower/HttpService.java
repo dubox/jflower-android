@@ -53,11 +53,16 @@ public class HttpService extends Service {
 
     AsyncHttpServer server = new AsyncHttpServer();
 
+    NotificationCompat.Builder builder;
+
+    NotificationManager notificationManager;
+
     Uri receivedImg;
 
     public HttpService() {
 
         EventBus.getDefault().register(new MySubscriber());
+
     }
 
     @Override
@@ -78,61 +83,77 @@ public class HttpService extends Service {
                 PendingIntent.getActivity(this, 0, notificationIntent,
                         PendingIntent.FLAG_IMMUTABLE);
 
-        Notification notification =
-                new NotificationCompat.Builder(this, createNotificationChannel("h1","http-service"))
-                        .setContentTitle("notification_title")
-                        .setContentText("notification_message")
-                        .setSmallIcon(R.drawable.logo)
-                        .setContentIntent(pendingIntent)
-                        .setTicker("ticker_text")
-                        .addAction(getAction())
-                        .build();
-        Log.i("notification","ok");
+
+        builder = new NotificationCompat.Builder(this, createNotificationChannel("h1", "http-service"))
+                .setContentTitle("jFlower")
+                .setContentText("Running...")
+                .setSmallIcon(R.drawable.logo)
+                .setContentIntent(pendingIntent)
+                .setTicker("ticker_text");
+
+        Log.i("notification", "ok");
         // Notification ID cannot be 0.
-        startForeground(1, notification);
+        startForeground(1, builder.build());
         startServer();
+        notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         // If we get killed, after returning from here, restart
 //        return super.onStartCommand(intent,flags,startId);
         return START_STICKY;
     }
 
-    private NotificationCompat.Action getAction(){
+
+    private NotificationCompat.Action imgAction(Uri imgUri) {
         // 创建一个 Intent ，用于点击操作按钮时触发
         Intent intent = new Intent(this, MyBroadcastReceiver.class);
-        intent.setAction(MyBroadcastReceiver.ACTION_COPY)
-                .setData(receivedImg);//TODO 这里set时receivedImg还是空的
+        intent.setAction(MyBroadcastReceiver.ACTION_IMG)
+                .setData(imgUri);
 
 // 创建一个 PendingIntent ，用于在通知中添加操作按钮
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
-// 获取主题中的图标属性
-        TypedArray styledAttributes = this.getTheme().obtainStyledAttributes(
-                new int[] { android.R.attr.actionModeCopyDrawable });
 
-// 从 TypedArray 中获取图标资源 ID
-        int iconResId = styledAttributes.getResourceId(0, 0);
 // 创建一个操作按钮，并将其添加到通知中
         return new NotificationCompat.Action.Builder(
-                iconResId,  // 图标
-                "Copy",  // 操作按钮标题
+                R.drawable.ic_menu_camera,  // 图标
+                "SHARE",  // 操作按钮标题
+                pendingIntent  // 点击操作按钮时触发的 PendingIntent
+        ).build();
+    }
+
+
+    private NotificationCompat.Action textAction(String text) {
+        // 创建一个 Intent ，用于点击操作按钮时触发
+        Intent intent = new Intent(this, MyBroadcastReceiver.class);
+        intent.setAction(MyBroadcastReceiver.ACTION_TEXT)
+                .putExtra("text",text);
+
+// 创建一个 PendingIntent ，用于在通知中添加操作按钮
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+
+// 创建一个操作按钮，并将其添加到通知中
+        return new NotificationCompat.Action.Builder(
+                R.drawable.ic_menu_camera,  // 图标
+                "SHARE",  // 操作按钮标题
                 pendingIntent  // 点击操作按钮时触发的 PendingIntent
         ).build();
     }
 
     /**
      * 创建通知通道
+     *
      * @param channelId
      * @param channelName
      * @return
      */
     @RequiresApi(Build.VERSION_CODES.O)
-    private String createNotificationChannel(String channelId, String channelName){
+    private String createNotificationChannel(String channelId, String channelName) {
         NotificationChannel chan = new NotificationChannel(channelId,
                 channelName, NotificationManager.IMPORTANCE_HIGH);
         chan.setLightColor(Color.BLUE);
         chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
         NotificationManager service = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         service.createNotificationChannel(chan);
-        Log.i("createNotificationChannel","ok");
+        Log.i("createNotificationChannel", "ok");
         return channelId;
     }
 
@@ -153,9 +174,9 @@ public class HttpService extends Service {
         server.get("/detect", new HttpServerRequestCallback() {
             @Override
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
-                if(request.getPath().equals("/detect")){
+                if (request.getPath().equals("/detect")) {
                     response.getHeaders().set("id", Utils.getId());
-                    response.getHeaders().set("name",Utils.getName());
+                    response.getHeaders().set("name", Utils.getName());
                 }
                 response.send("jFlower (局发) is running ...");
             }
@@ -166,32 +187,44 @@ public class HttpService extends Service {
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
 
 
-                switch (request.getPath()){
-                    case "/text":{
-                        String res = request.getBody().get().toString();
-                        Log.i("/text",res);
+                switch (request.getPath()) {
+                    case "/text": {
 
-                        ClipBoardUtil.copy(res,HttpService.this);
+                        String res = request.getBody().get().toString();
+                        Log.i("/text", res);
+
+//                        ClipBoardUtil.copy(res, HttpService.this);
+                        builder.setContentText(res)
+                                .setContentTitle("接收到文本，已复制到剪贴板")
+                                .setSubText("1234")
+                                .clearActions()
+                                .setWhen(System.currentTimeMillis())
+                                .addAction(textAction(res));
+                        notificationManager.notify(1,builder.build());
                         toast("接收到文本，已复制到剪贴板");
                         break;
                     }
-                    case "/img":{
+                    case "/img": {
                         String res = request.getBody().get().toString();
-                        Log.i("/img",res);
+                        Log.i("/img", res);
                         // 将 base64 字符串解码成字节数组
-                        byte[] bytes = Base64.decode(res.replaceFirst("^data:.*base64,",""), Base64.DEFAULT);
+                        byte[] bytes = Base64.decode(res.replaceFirst("^data:.*base64,", ""), Base64.DEFAULT);
                         // 将字节数组转换为 Bitmap 对象
                         Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                         // 获取相册保存的路径
                         String savedImagePath = MediaStore.Images.Media.insertImage(
                                 getContentResolver(),
                                 bitmap,
-                                "jFlower-"+(new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())),
-                                "From "+request.getHeaders().get("ip")
+                                "jFlower-" + (new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())),
+                                "From " + request.getHeaders().get("ip")
                         );
                         // 如果保存成功，则返回图像的 URI
                         if (savedImagePath != null) {
                             receivedImg = Uri.parse(savedImagePath);
+                            builder.setContentText("接收到图片，已保存到相册")
+                                    .setLargeIcon(bitmap)
+                                    .addAction(imgAction(receivedImg));
+                            notificationManager.notify(1,builder.build());
                             toast("接收到图片，已保存到相册");
                         } else {
                             toast("接收到图片，保存失败");
@@ -205,8 +238,8 @@ public class HttpService extends Service {
         server.listen(8891);
     }
 
-    private void toast(String msg){
-        EventBus.getDefault().post(new  MessageEvent(HttpService.this,MessageEvent.EVENT_TOAST, msg));
+    private void toast(String msg) {
+        EventBus.getDefault().post(new MessageEvent(HttpService.this, MessageEvent.EVENT_TOAST, msg));
     }
 
     private void stopServer() {
@@ -216,30 +249,29 @@ public class HttpService extends Service {
 
 
 /**
-    private void startServerThread() {
-        serverThread = new Thread(new HttpServerRunnable());
-        serverThread.start();
-    }
+ private void startServerThread() {
+ serverThread = new Thread(new HttpServerRunnable());
+ serverThread.start();
+ }
 
-    private void stopServerThread() {
-        if (serverThread != null) {
-            serverThread.interrupt();
-        }
-    }
+ private void stopServerThread() {
+ if (serverThread != null) {
+ serverThread.interrupt();
+ }
+ }
 
-    private class HttpServerRunnable implements Runnable {
-        @Override
-        public void run() {
-            try {
-                // Create and start your HTTP server here
-                httpServer = new HttpServer();
-                httpServer.start();
-            } catch (IOException e) {
-                Log.e("HttpServerService", "Failed to start HTTP server", e);
-            }
-        }
-    }
-*/
+ private class HttpServerRunnable implements Runnable {
+@Override public void run() {
+try {
+// Create and start your HTTP server here
+httpServer = new HttpServer();
+httpServer.start();
+} catch (IOException e) {
+Log.e("HttpServerService", "Failed to start HTTP server", e);
+}
+}
+}
+ */
 
 /*
 

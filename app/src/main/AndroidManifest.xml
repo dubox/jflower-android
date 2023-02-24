@@ -54,7 +54,8 @@
             android:name=".MyBroadcastReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.dubox.jflower.ACTION_COPY"/>
+                <action android:name="com.dubox.jflower.ACTION_TEXT"/>
+                <action android:name="com.dubox.jflower.ACTION_IMG"/>
             </intent-filter>
         </receiver>
         <provider
