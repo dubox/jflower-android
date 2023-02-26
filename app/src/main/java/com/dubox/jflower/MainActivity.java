@@ -1,6 +1,7 @@
 package com.dubox.jflower;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -30,6 +31,7 @@ import com.dubox.jflower.libs.utilsTrait.Net;
 import com.google.android.material.navigation.NavigationView;
 
 import androidx.annotation.RequiresApi;
+import androidx.core.content.FileProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -52,17 +54,24 @@ import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
+import org.apache.commons.io.IOUtils;
+
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -104,6 +113,9 @@ public class MainActivity extends AppCompatActivity {
 
         setSupportActionBar(binding.appBarMain.toolbar);
 
+        checkPermission();
+        startService();
+
         DrawerLayout drawer = binding.drawerLayout;
         NavigationView navigationView = binding.navView;
         // Passing each menu ID as a set of Ids because each
@@ -133,43 +145,45 @@ public class MainActivity extends AppCompatActivity {
                 MainActivity.this,
                 deviceDataList,
                 R.layout.device_item,
-                new String[]{"name"},
-                new int[]{R.id.device_name});
-        //实现列表的显示
-//        deviceListV = this.findViewById(R.id.device_list);
+                new String[]{"name","subName"},
+                new int[]{R.id.device_name,R.id.device_sub_name});
 
 
         freshIp();
 
         initHandler();
 
-        PermissonUtil.checkPermission(MainActivity.this, new PermissionListener() {
+
+    }
+
+    public void checkPermission(){
+        PermissonUtil.checkPermission(this, new PermissionListener() {
             @Override
             public void havePermission() {
 //                Toast.makeText(MainActivity.this, "获取成功", Toast.LENGTH_SHORT).show();
             }
-
             @Override
             public void requestPermissionFail() {
                 Toast.makeText(MainActivity.this, "授权失败", Toast.LENGTH_SHORT).show();
             }
         }, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE});
 
-        Log.i("main", "mainmainmainmainmain");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startService();
-        }
-
-
-
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
     protected void startService(){
-        Context context = getApplicationContext();
-        Intent intent = new Intent(this, HttpService.class); // Build the intent for the service
-        context.startForegroundService(intent);
+        //启动服务
+        if (!HttpService.serviceIsLive) {
+            // Android 8.0使用startForegroundService在前台启动新服务
+            Intent intent = new Intent(this, HttpService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent);
+            } else {
+                startService(intent);
+            }
+        } else {
+            Toast.makeText(this, "前台服务正在运行中...", Toast.LENGTH_SHORT).show();
+        }
     }
 
 
@@ -254,6 +268,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < 256; i++) {
 
             String ip = ipSeg + i;
+            if(ip.equals(localIp))continue;
             String uri = String.format("http://%s:8891/detect", ip);
 
             AsyncHttpClient.getDefaultInstance().executeString(new AsyncHttpRequest(Uri.parse(uri), "GET")
@@ -268,18 +283,19 @@ public class MainActivity extends AppCompatActivity {
                 public void onCompleted(Exception e, AsyncHttpResponse response, String result) {
                     //Log.i("uri1", uri);
                     if (e != null ) {
-//                        if(ip.equals("192.168.1.102")){
-//                            e.printStackTrace();
-//                        }
                         return;
                     }
                     HashMap<String, Object> item = new HashMap<>();
-                    item.put("name", ip);
+                    try {
+                        item.put("name", URLDecoder.decode( response.headers().get("name"), "UTF-8"));
+                    } catch (UnsupportedEncodingException ex) {
+                        item.put("name", response.headers().get("name"));
+                    }
+                    item.put("subName", ip);
                     if(!deviceListCleared){
                         deviceDataList.clear();
                         deviceListCleared = true;
                     }
-//                    deviceDataList.add(item);
                     deviceDataList.add(item);
                     handler.sendEmptyMessage(1);
                     Log.i("uri", uri);
@@ -338,7 +354,8 @@ public class MainActivity extends AppCompatActivity {
 
         AsyncHttpRequest req = new AsyncHttpRequest(Uri.parse(uri), "POST")
                     //.setTimeout(5000)
-                    .setHeader("Content-Type", "application/x-www-form-urlencoded")
+                    .setHeader("Content-Type", "text/plain")
+//                    .setHeader("Content-Type", "application/x-www-form-urlencoded")
                     .setHeader("Content-Length", body.length()+"")
                     .setHeader("cmd", type)
                     .setHeader("ip", localIp)
@@ -361,8 +378,13 @@ public class MainActivity extends AppCompatActivity {
 
                     if (e != null) {
                         Log.i("send","22");
-                        handler.sendEmptyMessage(10);
-                        return;
+                        try {
+                            throw e;
+                        } catch (Exception ex) {
+                            throw new RuntimeException(ex);
+                        }
+//                        handler.sendEmptyMessage(10);
+//                        return;
                     }
                     Log.i("send","33");
                     handler.sendEmptyMessage(11);
@@ -381,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent=getIntent();
         String action=intent.getAction();
         String type=intent.getType();
-        if(action.equals(Intent.ACTION_SEND)){
+        if(action != null && action.equals(Intent.ACTION_SEND)){
             act = Act.SHARE;
             Log.i("handleShare","111111111111");
             Log.i("type",type);

@@ -62,10 +62,10 @@ public class HomeFragment extends Fragment {
             HashMap<String,Object> map =  (HashMap<String, Object>) adapterView.getItemAtPosition(i);
             switch (mainActivity.sharingType){
                 case TEXT:
-                    mainActivity.deviceSendText(map.get("name").toString() ,mainActivity.waitingText);
+                    mainActivity.deviceSendText(map.get("subName").toString() ,mainActivity.waitingText);
                     break;
                 case IMAGE:
-                    mainActivity.deviceSendImg(map.get("name").toString() ,mainActivity.waitingImage);
+                    mainActivity.deviceSendImg(map.get("subName").toString() ,mainActivity.waitingImage);
                     break;
             }
 

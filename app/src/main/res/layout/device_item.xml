@@ -23,10 +23,22 @@
             android:id="@+id/device_name"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:gravity="center"
-            android:text="TextView"
+            android:layout_marginTop="10dp"
+            android:gravity="center|top"
+            android:text="name"
             android:textAlignment="center"
-            android:textSize="16sp" />
+            android:textSize="16dp" />
+
+        <TextView
+            android:id="@+id/device_sub_name"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="5dp"
+            android:gravity="bottom|center"
+            android:text="sub_name"
+            android:textAlignment="center"
+            android:textColor="#979797"
+            android:textSize="14dp" />
     </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -37,8 +37,15 @@ import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
+import org.apache.commons.io.IOUtils;
 import org.greenrobot.eventbus.EventBus;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -48,6 +55,7 @@ import java.util.List;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.ThemeUtils;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.FileProvider;
 
 public class HttpService extends Service {
 
@@ -58,6 +66,8 @@ public class HttpService extends Service {
     NotificationManager notificationManager;
 
     Uri receivedImg;
+
+    static boolean serviceIsLive = false;
 
     public HttpService() {
 
@@ -89,6 +99,7 @@ public class HttpService extends Service {
                 .setContentText("Running...")
                 .setSmallIcon(R.drawable.logo)
                 .setContentIntent(pendingIntent)
+//                .addAction(defAction())
                 .setTicker("ticker_text");
 
         Log.i("notification", "ok");
@@ -99,20 +110,54 @@ public class HttpService extends Service {
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         // If we get killed, after returning from here, restart
 //        return super.onStartCommand(intent,flags,startId);
+        serviceIsLive = true;
         return START_STICKY;
     }
 
+    public Uri uriToPrivate(Uri uri){
+        File imageFile = null;
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(uri);
+            byte[] imageBytes = IOUtils.toByteArray(inputStream);
+            // 将图片保存到应用私有目录中
+            imageFile = new File(getExternalFilesDir(null), "jFlower-"+(new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()))+".png");
+            FileOutputStream fos = null;
 
-    private NotificationCompat.Action imgAction(Uri imgUri) {
-        // 创建一个 Intent ，用于点击操作按钮时触发
-        Intent intent = new Intent(this, MyBroadcastReceiver.class);
-        intent.setAction(MyBroadcastReceiver.ACTION_IMG)
-                .setData(imgUri);
+            fos = new FileOutputStream(imageFile);
+            fos.write(imageBytes);
+            fos.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if(imageFile == null) {
+            Toast.makeText(this, "分享失败", Toast.LENGTH_SHORT).show();
+            throw new RuntimeException();
+        }
+        // 获取保存后的图片的Uri
+       return FileProvider.getUriForFile(this, "com.dubox.jflower.fileprovider", imageFile);
 
-// 创建一个 PendingIntent ，用于在通知中添加操作按钮
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+    }
 
-// 创建一个操作按钮，并将其添加到通知中
+    public PendingIntent shareFile( Uri uri){
+        Log.i("Share",uri.toString());
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("image/*");
+        shareIntent.putExtra(Intent.EXTRA_STREAM, uriToPrivate(uri));
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        return PendingIntent.getActivity(this, 0, Intent.createChooser(shareIntent, "Share"), PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+
+    public PendingIntent shareText(String text){
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, text);
+        return PendingIntent.getActivity(this, 0, Intent.createChooser(shareIntent, "Share"), PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    private NotificationCompat.Action fileAction(Uri uri) {
+        PendingIntent pendingIntent = shareFile( uri);
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
                 "SHARE",  // 操作按钮标题
@@ -122,15 +167,7 @@ public class HttpService extends Service {
 
 
     private NotificationCompat.Action textAction(String text) {
-        // 创建一个 Intent ，用于点击操作按钮时触发
-        Intent intent = new Intent(this, MyBroadcastReceiver.class);
-        intent.setAction(MyBroadcastReceiver.ACTION_TEXT)
-                .putExtra("text",text);
-
-// 创建一个 PendingIntent ，用于在通知中添加操作按钮
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
-
-// 创建一个操作按钮，并将其添加到通知中
+        PendingIntent pendingIntent = shareText( text);
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
                 "SHARE",  // 操作按钮标题
@@ -145,21 +182,23 @@ public class HttpService extends Service {
      * @param channelName
      * @return
      */
-    @RequiresApi(Build.VERSION_CODES.O)
     private String createNotificationChannel(String channelId, String channelName) {
-        NotificationChannel chan = new NotificationChannel(channelId,
-                channelName, NotificationManager.IMPORTANCE_HIGH);
-        chan.setLightColor(Color.BLUE);
-        chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-        NotificationManager service = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        service.createNotificationChannel(chan);
-        Log.i("createNotificationChannel", "ok");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel chan = new NotificationChannel(channelId,
+                    channelName, NotificationManager.IMPORTANCE_HIGH);
+            chan.setLightColor(Color.BLUE);
+            chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+            NotificationManager service = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            service.createNotificationChannel(chan);
+            Log.i("createNotificationChannel", "ok");
+        }
         return channelId;
     }
 
     @Override
     public void onDestroy() {
         Log.e("HttpService", "onDestroy");
+        serviceIsLive = false;
         stopServer();
         // 移除通知
         stopForeground(true);
@@ -176,7 +215,11 @@ public class HttpService extends Service {
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
                 if (request.getPath().equals("/detect")) {
                     response.getHeaders().set("id", Utils.getId());
-                    response.getHeaders().set("name", Utils.getName());
+                    try {
+                        response.getHeaders().set("name", URLEncoder.encode( Utils.getName(), "UTF-8"));
+                    } catch (UnsupportedEncodingException e) {
+                        response.getHeaders().set("name", Utils.getName() );
+                    }
                 }
                 response.send("jFlower (局发) is running ...");
             }
@@ -193,14 +236,15 @@ public class HttpService extends Service {
                         String res = request.getBody().get().toString();
                         Log.i("/text", res);
 
-//                        ClipBoardUtil.copy(res, HttpService.this);
                         builder.setContentText(res)
                                 .setContentTitle("接收到文本，已复制到剪贴板")
-                                .setSubText("1234")
+                                .setSubText("TEXT")
                                 .clearActions()
+                                .setLargeIcon(null)
                                 .setWhen(System.currentTimeMillis())
                                 .addAction(textAction(res));
                         notificationManager.notify(1,builder.build());
+                        copy(res);
                         toast("接收到文本，已复制到剪贴板");
                         break;
                     }
@@ -221,9 +265,13 @@ public class HttpService extends Service {
                         // 如果保存成功，则返回图像的 URI
                         if (savedImagePath != null) {
                             receivedImg = Uri.parse(savedImagePath);
-                            builder.setContentText("接收到图片，已保存到相册")
+                            builder.setContentTitle("接收到图片，已保存到相册")
+                                    .setContentText("接收到图片，已保存到相册")
+                                    .setSubText("IMAGE")
                                     .setLargeIcon(bitmap)
-                                    .addAction(imgAction(receivedImg));
+                                    .clearActions()
+                                    .setWhen(System.currentTimeMillis())
+                                    .addAction(fileAction(receivedImg));
                             notificationManager.notify(1,builder.build());
                             toast("接收到图片，已保存到相册");
                         } else {
@@ -235,11 +283,22 @@ public class HttpService extends Service {
             }
         });
 
+        server.setErrorCallback(new CompletedCallback() {
+            @Override
+            public void onCompleted(Exception ex) {
+                Log.e("HTTP", ex.getMessage());
+            }
+        });
+
         server.listen(8891);
+
     }
 
     private void toast(String msg) {
         EventBus.getDefault().post(new MessageEvent(HttpService.this, MessageEvent.EVENT_TOAST, msg));
+    }
+    private void copy(String msg) {
+        EventBus.getDefault().post(new MessageEvent(HttpService.this, MessageEvent.EVENT_COPY, msg));
     }
 
     private void stopServer() {
@@ -248,48 +307,5 @@ public class HttpService extends Service {
     }
 
 
-/**
- private void startServerThread() {
- serverThread = new Thread(new HttpServerRunnable());
- serverThread.start();
- }
-
- private void stopServerThread() {
- if (serverThread != null) {
- serverThread.interrupt();
- }
- }
-
- private class HttpServerRunnable implements Runnable {
-@Override public void run() {
-try {
-// Create and start your HTTP server here
-httpServer = new HttpServer();
-httpServer.start();
-} catch (IOException e) {
-Log.e("HttpServerService", "Failed to start HTTP server", e);
-}
-}
-}
- */
-
-/*
-
-//启动服务
-if (!ForegroundService.serviceIsLive) {
-    // Android 8.0使用startForegroundService在前台启动新服务
-    mForegroundService = new Intent(this, ForegroundService.class);
-    mForegroundService.putExtra("Foreground", "This is a foreground service.");
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        startForegroundService(mForegroundService);
-    } else {
-        startService(mForegroundService);
-    }
-} else {
-    Toast.makeText(this, "前台服务正在运行中...", Toast.LENGTH_SHORT).show();
-}
-
-
- */
 
 }

@@ -5,6 +5,7 @@ import android.content.Context;
 public class MessageEvent {
 
     public static final int EVENT_TOAST = 1;
+    public static final int EVENT_COPY = 2;
     private int type = 0;
     private Object data;
 
