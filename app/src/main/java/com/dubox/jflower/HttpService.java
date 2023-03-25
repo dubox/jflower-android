@@ -45,6 +45,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
@@ -156,12 +157,34 @@ public class HttpService extends Service {
         return PendingIntent.getActivity(this, 0, Intent.createChooser(shareIntent, "Share"), PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    private NotificationCompat.Action fileAction(Uri uri) {
+    private NotificationCompat.Action imgAction(Uri uri) {
         PendingIntent pendingIntent = shareFile( uri);
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
                 "SHARE",  // 操作按钮标题
                 pendingIntent  // 点击操作按钮时触发的 PendingIntent
+        ).build();
+    }
+
+    private NotificationCompat.Action fileAction(String ip,String key,String fileName) {
+        // 创建下载操作的 PendingIntent
+        Intent downloadIntent = new Intent(this, DownloadService.class);
+        downloadIntent.putExtra("fileUrl", "http://"+ip+":8891/getFile");
+        downloadIntent.putExtra("key", key);
+        downloadIntent.putExtra("fileName", fileName);
+
+        PendingIntent downloadPendingIntent = PendingIntent.getService(
+                this,
+                0,
+                downloadIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+        );
+
+// 创建通知操作
+       return new NotificationCompat.Action.Builder(
+                R.drawable.ic_menu_slideshow,
+                "接收",
+                downloadPendingIntent
         ).build();
     }
 
@@ -171,6 +194,15 @@ public class HttpService extends Service {
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
                 "SHARE",  // 操作按钮标题
+                pendingIntent  // 点击操作按钮时触发的 PendingIntent
+        ).build();
+    }
+    private NotificationCompat.Action urlAction(String link) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(link));
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return new NotificationCompat.Action.Builder(
+                R.drawable.ic_menu_camera,  // 图标
+                "OPEN",  // 操作按钮标题
                 pendingIntent  // 点击操作按钮时触发的 PendingIntent
         ).build();
     }
@@ -229,20 +261,24 @@ public class HttpService extends Service {
             @Override
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
 
-
+                Log.i("request.getPath()", request.getPath());
+                String name = request.getHeaders().get("name");
+                String ip = request.getHeaders().get("ip");
                 switch (request.getPath()) {
                     case "/text": {
 
                         String res = request.getBody().get().toString();
                         Log.i("/text", res);
-
                         builder.setContentText(res)
-                                .setContentTitle("接收到文本，已复制到剪贴板")
-                                .setSubText("TEXT")
+                                .setContentTitle("来自："+name)
+                                .setSubText(ip)
                                 .clearActions()
                                 .setLargeIcon(null)
                                 .setWhen(System.currentTimeMillis())
                                 .addAction(textAction(res));
+                        if(res.startsWith("https://") || res.startsWith("http://")){
+                            builder.addAction(urlAction(res));
+                        }
                         notificationManager.notify(1,builder.build());
                         copy(res);
                         toast("接收到文本，已复制到剪贴板");
@@ -265,23 +301,47 @@ public class HttpService extends Service {
                         // 如果保存成功，则返回图像的 URI
                         if (savedImagePath != null) {
                             receivedImg = Uri.parse(savedImagePath);
-                            builder.setContentTitle("接收到图片，已保存到相册")
-                                    .setContentText("接收到图片，已保存到相册")
-                                    .setSubText("IMAGE")
+                            builder.setContentTitle("来自："+name)
+                                    .setContentText("的图片，已保存到相册")
+                                    .setSubText(ip)
                                     .setLargeIcon(bitmap)
                                     .clearActions()
                                     .setWhen(System.currentTimeMillis())
-                                    .addAction(fileAction(receivedImg));
+                                    .addAction(imgAction(receivedImg));
                             notificationManager.notify(1,builder.build());
                             toast("接收到图片，已保存到相册");
                         } else {
                             toast("接收到图片，保存失败");
                         }
+                        break;
+                    }
+                    case "/fileAsk": {
+                        Log.i("/fileAsk", "--");
+                        String fileName;
+                        try {
+                            fileName = URLDecoder.decode(request.getHeaders().get("file_name"),"UTF-8");
+                        } catch (UnsupportedEncodingException e) {
+                            fileName = request.getHeaders().get("file_name");
+                        }
+                        Log.i("/fileAsk", fileName);
+                        long size = Long.parseLong(request.getHeaders().get("file_size"));
+                        builder.setContentText( fileName + "("+Utils.formatFileSize(size)+")")
+                                .setContentTitle("来自："+name)
+                                .setSubText(ip)
+                                .clearActions()
+                                .setLargeIcon(null)
+                                .setWhen(System.currentTimeMillis())
+                                .addAction(fileAction(ip,request.getHeaders().get("key") ,fileName));
+
+                        notificationManager.notify(1,builder.build());
+                        toast("接收到文件请求");
+                        break;
                     }
                 }
                 response.end();
             }
         });
+
 
         server.setErrorCallback(new CompletedCallback() {
             @Override

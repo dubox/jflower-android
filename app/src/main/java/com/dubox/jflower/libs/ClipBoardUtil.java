@@ -11,8 +11,8 @@ public class ClipBoardUtil {
      * 获取剪切板内容
      * @return
      */
-    public static String paste(){
-        ClipboardManager clipboard = (ClipboardManager)ActivityManager.getTopActivity().getSystemService(Context.CLIPBOARD_SERVICE);
+    public static String paste(Context context){
+        ClipboardManager clipboard = (ClipboardManager)context.getSystemService(Context.CLIPBOARD_SERVICE);
 
         ClipData clipData = clipboard.getPrimaryClip();
 
@@ -27,6 +27,10 @@ public class ClipBoardUtil {
 
         }
         return "";
+    }
+
+    public static void copy(){
+        paste(ActivityManager.getTopActivity());
     }
 
     public static void copy(String text){

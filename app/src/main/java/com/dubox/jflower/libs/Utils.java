@@ -8,8 +8,10 @@ import android.provider.Settings;
 import com.dubox.jflower.libs.utilsTrait.Net;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.DecimalFormat;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -18,6 +20,9 @@ public class Utils implements Net {
    public static String getId(){
        return settingGet("localId",md5(System.currentTimeMillis()+""));
    }
+   public static String getId(Context context){
+       return settingGet(context,"localId",md5(System.currentTimeMillis()+""));
+   }
 
    public static String getName(){
        return Settings.Secure.getString(ActivityManager.getTopActivity().getContentResolver(), "bluetooth_name");
@@ -25,7 +30,11 @@ public class Utils implements Net {
 
 
     protected static String settingGet(String name ,String def){
-        SharedPreferences setting = ActivityManager.getTopActivity().getSharedPreferences("com.dubox.jflower", MODE_PRIVATE);
+
+        return settingGet(ActivityManager.getTopActivity(),name, def);
+    }
+    protected static String settingGet(Context context, String name ,String def){
+        SharedPreferences setting = context.getSharedPreferences("com.dubox.jflower", MODE_PRIVATE);
 
         String v = setting.getString(name, "");
         if(v == ""){
@@ -74,6 +83,23 @@ public class Utils implements Net {
         catch (UnsupportedEncodingException e)
         {
             return "";
+        }
+    }
+
+    public static String formatFileSize(long size) {
+        if (size <= 0) {
+            return "0KB";
+        }
+        final String[] units = new String[] { "B", "KB", "MB" };
+        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+    }
+
+    public static String urlEncode(String str){
+        try {
+            return URLEncoder.encode(str, "utf-8");
+        } catch (UnsupportedEncodingException e) {
+            return str;
         }
     }
 }

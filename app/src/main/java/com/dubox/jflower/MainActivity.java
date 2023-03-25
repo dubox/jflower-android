@@ -203,9 +203,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                     act = Act.PASTE;
-                    Log.i("paste", ClipBoardUtil.paste());
+                    Log.i("paste", ClipBoardUtil.paste(MainActivity.this));
                     sharingType = SharingType.TEXT;
-                    waitingText = ClipBoardUtil.paste();
+                    waitingText = ClipBoardUtil.paste(MainActivity.this);
 
             }
         });
@@ -276,7 +276,7 @@ public class MainActivity extends AppCompatActivity {
                     .setHeader("cmd", "detect")
                     .setHeader("ip", localIp)
                     .setHeader("id", localId)
-                    .setHeader("name",urlEncode(localName))
+                    .setHeader("name",Utils.urlEncode(localName))
                     .setHeader("findingCode", ""), new AsyncHttpClient.StringCallback() {
                 // Callback is invoked with any exceptions/errors, and the result, if available.
                 @Override
@@ -360,7 +360,7 @@ public class MainActivity extends AppCompatActivity {
                     .setHeader("cmd", type)
                     .setHeader("ip", localIp)
                     .setHeader("id", localId)
-                    .setHeader("name",urlEncode(localName))
+                    .setHeader("name",Utils.urlEncode(localName))
                     //.setHeader("file_name",urlEncode(localName))
                     .setHeader("findingCode", "");
         options.forEach((key, value) -> {
@@ -457,13 +457,7 @@ Log.i("img_path",img_path);
     }
 
 
-    public String urlEncode(String str){
-        try {
-            return URLEncoder.encode(str, "utf-8");
-        } catch (UnsupportedEncodingException e) {
-            return str;
-        }
-    }
+
 
     public void openDownloadPage(View view) {
         Uri uri = Uri.parse("https://pan.baidu.com/s/10b4SFgZnWGTO6B0BzwNtXA?pwd=tts5");
