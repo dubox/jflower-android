@@ -15,6 +15,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
+import android.provider.DocumentsContract;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
@@ -168,17 +169,35 @@ public class DownloadService extends Service {
         return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
     private PendingIntent getOpenDirIntent(File file) {
-
+//
+//    <external-path name="com.dubox.jflower.fileprovider" path="Download/"/>
         Log.i("fileprovider",getApplicationContext().getPackageName() + ".fileprovider");
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        File dir = file.getParentFile();
-        Uri fileUri = FileProvider.getUriForFile(this, "com.dubox.jflower.fileprovider", dir);
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        File dir = file;
+        Log.i("dir",dir.getAbsolutePath());
+        Uri fileUri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", dir);
+//        Uri fileUri = Uri.fromFile(dir);
 //        intent.setDataAndType(fileUri, "vnd.android.document/directory");
         intent.setDataAndType(fileUri, "*/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
+    }
+    private PendingIntent getOpenDirIntent3(File file) {
+        Uri uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download");
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri);
+        return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+    private PendingIntent getOpenDirIntent4(File file) {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.addCategory(Intent.CATEGORY_DEFAULT);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setDataAndType(Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)), "file/*");
+        return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private String getMimeType(String url) {
