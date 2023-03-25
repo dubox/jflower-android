@@ -49,12 +49,6 @@ import com.koushikdutta.async.http.WebSocket;
 import com.koushikdutta.async.http.body.AsyncHttpRequestBody;
 import com.koushikdutta.async.http.body.StreamBody;
 import com.koushikdutta.async.http.body.StringBody;
-import com.koushikdutta.async.http.server.AsyncHttpServer;
-import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
-import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
-import com.koushikdutta.async.http.server.HttpServerRequestCallback;
-
-import org.apache.commons.io.IOUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -62,14 +56,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
@@ -197,18 +184,14 @@ public class MainActivity extends AppCompatActivity {
         getClipboardData();
     }
 
-    private void getClipboardData() {
-        if(act != Act.NONE)return;
-        this.getWindow().getDecorView().post(new Runnable() {
-            @Override
-            public void run() {
-                    act = Act.PASTE;
-                    Log.i("paste", ClipBoardUtil.paste(MainActivity.this));
-                    sharingType = SharingType.TEXT;
-                    waitingText = ClipBoardUtil.paste(MainActivity.this);
+    public String getClipboardData() {
+        if(act == Act.SHARE)return "";
 
-            }
-        });
+        act = Act.PASTE;
+        Log.i("paste", ClipBoardUtil.paste(MainActivity.this));
+        sharingType = SharingType.TEXT;
+        return waitingText = ClipBoardUtil.paste(MainActivity.this);
+
     }
 
     public void setAdapter(){

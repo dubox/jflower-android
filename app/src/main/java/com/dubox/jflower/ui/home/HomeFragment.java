@@ -54,7 +54,6 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
         super.onViewStateRestored(savedInstanceState);
-        Log.i("home333","sssassssss");
 
         ListView deviceListV = ((ListView)binding.getRoot().findViewById(R.id.device_list));
         deviceListV.setAdapter(mainActivity.adapter);
@@ -67,6 +66,8 @@ public class HomeFragment extends Fragment {
                 case IMAGE:
                     mainActivity.deviceSendImg(map.get("subName").toString() ,mainActivity.waitingImage);
                     break;
+                default:
+                    mainActivity.deviceSendText(map.get("subName").toString() ,mainActivity.getClipboardData());
             }
 
         });
