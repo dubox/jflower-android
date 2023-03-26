@@ -1,6 +1,7 @@
 package com.dubox.jflower;
 
 import android.Manifest;
+import android.app.DownloadManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -9,6 +10,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
@@ -87,11 +89,71 @@ public class DownloadService extends Service {
 
         startForeground(NOTIFICATION_ID, notificationBuilder.build());
 
+
+
         // Start the download
+        execDownload(url,fileName,key);
+
+        return START_NOT_STICKY;
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+
+    private void execDownload(String url,String fileName ,String fileKey ){
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI);
+        request.setTitle(fileName);
+//        request.setMimeType(mimeType);
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+        request.addRequestHeader("file_name", Utils.urlEncode(fileName))
+                .addRequestHeader("key", fileKey)
+                .addRequestHeader("range", "bytes=0-")
+                .addRequestHeader("cmd", "getFile")
+                .addRequestHeader("ip", Net.localIp(this))
+                .addRequestHeader("id", Utils.getId(this));
+        DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        long downloadId = downloadManager.enqueue(request);
+
+        DownloadManager.Query query = new DownloadManager.Query();
+        query.setFilterById(downloadId);
+
+        Cursor cursor = downloadManager.query(query);
+        if(cursor.moveToFirst()) {
+            int index = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+            int status = cursor.getInt(index);
+            switch (status) {
+                case DownloadManager.STATUS_RUNNING:
+                    index = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
+                    int totalSize = cursor.getInt(index);
+                    index = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+                    int downloadSize = cursor.getInt(index);
+                    int progress = downloadSize * 100 / totalSize;
+                    // 更新下载进度
+                    notificationBuilder.setProgress(100, progress, false);
+                    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+                    break;
+                case DownloadManager.STATUS_SUCCESSFUL:
+                    // 下载完成
+                    break;
+                case DownloadManager.STATUS_FAILED:
+                    // 下载失败
+                    break;
+            }
+        }
+        cursor.close();
+
+    }
+
+    private void execDownload2(String url,String fileName ,String fileKey ,File dir){
         AsyncHttpClient.getDefaultInstance().executeFile(
                 new AsyncHttpRequest(Uri.parse(url), "GET")
                         .setHeader("file_name", Utils.urlEncode(fileName))
-                        .setHeader("key", key)
+                        .setHeader("key", fileKey)
                         .setHeader("range", "bytes=0-")
                         .setHeader("cmd", "getFile")
                         .setHeader("ip", Net.localIp(this))
@@ -147,13 +209,6 @@ public class DownloadService extends Service {
 
                 });
 
-        return START_NOT_STICKY;
-    }
-
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
     }
 
     private PendingIntent getOpenFileIntent(File file) {
@@ -173,7 +228,7 @@ public class DownloadService extends Service {
 //    <external-path name="com.dubox.jflower.fileprovider" path="Download/"/>
         Log.i("fileprovider",getApplicationContext().getPackageName() + ".fileprovider");
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        File dir = file;
+        File dir = newFile(file,"/");
         Log.i("dir",dir.getAbsolutePath());
         Uri fileUri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", dir);
 //        Uri fileUri = Uri.fromFile(dir);

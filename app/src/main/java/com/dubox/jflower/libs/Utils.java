@@ -8,6 +8,7 @@ import android.provider.Settings;
 import com.dubox.jflower.libs.utilsTrait.Net;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -99,6 +100,14 @@ public class Utils implements Net {
         try {
             return URLEncoder.encode(str, "utf-8");
         } catch (UnsupportedEncodingException e) {
+            return str;
+        }
+    }
+
+    public static String urlDecode(String str){
+        try {
+            return URLDecoder.decode( str, "utf-8");
+        } catch (UnsupportedEncodingException ex) {
             return str;
         }
     }

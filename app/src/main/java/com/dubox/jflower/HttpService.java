@@ -72,7 +72,7 @@ public class HttpService extends Service {
 
     public HttpService() {
 
-        EventBus.getDefault().register(new MySubscriber());
+//        EventBus.getDefault().register(new MySubscriber());
 
     }
 
@@ -234,7 +234,7 @@ public class HttpService extends Service {
         stopServer();
         // 移除通知
         stopForeground(true);
-        EventBus.getDefault().unregister(new MySubscriber());
+//        EventBus.getDefault().unregister(new MySubscriber());
         super.onDestroy();
     }
 

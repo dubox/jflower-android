@@ -269,11 +269,7 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
                     HashMap<String, Object> item = new HashMap<>();
-                    try {
-                        item.put("name", URLDecoder.decode( response.headers().get("name"), "UTF-8"));
-                    } catch (UnsupportedEncodingException ex) {
-                        item.put("name", response.headers().get("name"));
-                    }
+                    item.put("name", Utils.urlDecode(response.headers().get("name")));
                     item.put("subName", ip);
                     if(!deviceListCleared){
                         deviceDataList.clear();
