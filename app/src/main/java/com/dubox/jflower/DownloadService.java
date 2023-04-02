@@ -7,15 +7,19 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
 import android.provider.DocumentsContract;
 import android.util.Log;
@@ -27,6 +31,8 @@ import com.dubox.jflower.libs.utilsTrait.Net;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.koushikdutta.async.http.AsyncHttpRequest;
 import com.koushikdutta.async.http.AsyncHttpResponse;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -50,6 +56,95 @@ public class DownloadService extends Service {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
 
+    private DownloadReceiver downloadReceiver;
+
+    long downloadingId;
+
+    private ContentObserver downloadObserver = new ContentObserver(new Handler()) {
+        @Override
+        public void onChange(boolean selfChange) {
+            super.onChange(selfChange);
+//            Intent fileIntent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+//        fileIntent.setData(downloadManager.getUriForDownloadedFile(downloadId));
+//        fileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//        startActivity(fileIntent);
+            DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downloadingId);
+
+            Cursor cursor = downloadManager.query(query);
+            if (cursor.moveToFirst()) {
+                int index = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                int status = cursor.getInt(index);
+                switch (status) {
+                    case DownloadManager.STATUS_RUNNING:
+//                    index = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
+//                    int totalSize = cursor.getInt(index);
+//                    index = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+//                    int downloadSize = cursor.getInt(index);
+//                    int progress = downloadSize * 100 / totalSize;
+//                    // 更新下载进度
+//                    notificationBuilder.setProgress(100, progress, false);
+//                    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+                        break;
+                    case DownloadManager.STATUS_SUCCESSFUL:
+                        // 下载完成
+                        Log.i("progress", "onSuccess");
+                    openFile(downloadManager,downloadingId);
+//                        try {
+//                            downloadManager.openDownloadedFile(downloadingId);
+//
+//                        } catch (FileNotFoundException e) {
+//                            throw new RuntimeException(e);
+//                        }
+
+//                            .setContentTitle("接收完毕")
+//                            .setContentText("点击查看")
+//                            .setAutoCancel(true)
+//                            .setContentIntent(getOpenDirIntent(response));
+////                                .setContentIntent(getOpenFileIntent(response));
+////                                .addAction(imgAction(receivedImg));
+//                    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+                        break;
+                    case DownloadManager.STATUS_FAILED:
+                        // 下载失败
+                        break;
+                }
+            }
+            cursor.close();
+        }
+    };
+
+    private void openFile(DownloadManager downloadManager, long downloadId) {
+        Uri fileUri = downloadManager.getUriForDownloadedFile(downloadId);
+        if (fileUri != null) {
+            try {
+                Intent fileIntent = new Intent(Intent.ACTION_VIEW);
+//                        fileIntent.setData(Uri.parse("content://downloads/my_downloads"));
+//                        fileIntent.setData(Uri.parse("content://com.android.externalstorage.documents/document/primary:Download"));
+//                        ContentResolver cr = context.getContentResolver();
+                String mimeType = Utils.guessMimeType(fileUri.toString());
+                Log.i(mimeType, fileUri.toString());
+                Toast.makeText(this, "mimeType:" + mimeType, Toast.LENGTH_LONG).show();
+                fileIntent.setDataAndType(fileUri, mimeType);
+                fileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY);
+
+                this.startActivity(Intent.createChooser(fileIntent, "Choose File Manager").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY));
+
+
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(this, "无法打开该文件，请到下载目录查看", Toast.LENGTH_SHORT).show();
+                Intent fileIntent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+                fileIntent.setData(fileUri);
+                fileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                this.startActivity(fileIntent);
+//                        openDownloadedFile( context,  downloadId);
+            }
+        } else {
+            // 文件不存在，尝试重新下载
+            Toast.makeText(this, "文件不存在，请重新下载", Toast.LENGTH_SHORT).show();
+        }
+    }
 
     /**
      * 创建通知通道
@@ -77,22 +172,34 @@ public class DownloadService extends Service {
         String fileName = intent.getStringExtra("fileName");
         String key = intent.getStringExtra("key");
 //        String dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-//        String dir = getFilesDir().getAbsolutePath();
-        File dir = newFile(getExternalFilesDir(null),fileName);
+//        File dir = getFilesDir();//.getAbsolutePath();
+        File dir = newFile(getExternalFilesDir(null), fileName);
 
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent =
+                PendingIntent.getActivity(this, 0, notificationIntent,
+                        PendingIntent.FLAG_IMMUTABLE);
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notificationBuilder = new NotificationCompat.Builder(this, createNotificationChannel("d1", "download"))
                 .setContentTitle(fileName)
                 .setContentText("正在下载...")
                 .setSmallIcon(R.drawable.logo)
+                .setContentIntent(pendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_LOW);
 
         startForeground(NOTIFICATION_ID, notificationBuilder.build());
 
+//        downloadReceiver = new DownloadReceiver();
+//        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+//        registerReceiver(downloadReceiver, filter);
 
-
+        getContentResolver().registerContentObserver(
+                Uri.parse("content://downloads/my_downloads"),
+                true,
+                downloadObserver);
         // Start the download
-        execDownload(url,fileName,key);
+        execDownload(url, fileName, key);
+//        execDownload(url,fileName,key ,dir);
 
         return START_NOT_STICKY;
     }
@@ -103,8 +210,20 @@ public class DownloadService extends Service {
         return null;
     }
 
+    @Override
+    public void onDestroy() {
+        Log.e("DownloadService", "onDestroy");
+        if (downloadReceiver != null) {
+            unregisterReceiver(downloadReceiver);
+            downloadReceiver = null;
+        }
+        getContentResolver().unregisterContentObserver(downloadObserver);
 
-    private void execDownload(String url,String fileName ,String fileKey ){
+        super.onDestroy();
+    }
+
+
+    private void execDownload(String url, String fileName, String fileKey) {
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
         request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI);
         request.setTitle(fileName);
@@ -117,39 +236,13 @@ public class DownloadService extends Service {
                 .addRequestHeader("ip", Net.localIp(this))
                 .addRequestHeader("id", Utils.getId(this));
         DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-        long downloadId = downloadManager.enqueue(request);
+        downloadingId = downloadManager.enqueue(request);
+        Log.i("downloadId1", downloadingId + "");
 
-        DownloadManager.Query query = new DownloadManager.Query();
-        query.setFilterById(downloadId);
-
-        Cursor cursor = downloadManager.query(query);
-        if(cursor.moveToFirst()) {
-            int index = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-            int status = cursor.getInt(index);
-            switch (status) {
-                case DownloadManager.STATUS_RUNNING:
-                    index = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
-                    int totalSize = cursor.getInt(index);
-                    index = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
-                    int downloadSize = cursor.getInt(index);
-                    int progress = downloadSize * 100 / totalSize;
-                    // 更新下载进度
-                    notificationBuilder.setProgress(100, progress, false);
-                    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-                    break;
-                case DownloadManager.STATUS_SUCCESSFUL:
-                    // 下载完成
-                    break;
-                case DownloadManager.STATUS_FAILED:
-                    // 下载失败
-                    break;
-            }
-        }
-        cursor.close();
 
     }
 
-    private void execDownload2(String url,String fileName ,String fileKey ,File dir){
+    private void execDownload(String url, String fileName, String fileKey, File dir) {
         AsyncHttpClient.getDefaultInstance().executeFile(
                 new AsyncHttpRequest(Uri.parse(url), "GET")
                         .setHeader("file_name", Utils.urlEncode(fileName))
@@ -223,13 +316,14 @@ public class DownloadService extends Service {
         intent.setDataAndType(uri, getMimeType(file.getAbsolutePath()));
         return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
+
     private PendingIntent getOpenDirIntent(File file) {
 //
 //    <external-path name="com.dubox.jflower.fileprovider" path="Download/"/>
-        Log.i("fileprovider",getApplicationContext().getPackageName() + ".fileprovider");
+        Log.i("fileprovider", getApplicationContext().getPackageName() + ".fileprovider");
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        File dir = newFile(file,"/");
-        Log.i("dir",dir.getAbsolutePath());
+        File dir = newFile(file, "/");
+        Log.i("dir", dir.getAbsolutePath());
         Uri fileUri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", dir);
 //        Uri fileUri = Uri.fromFile(dir);
 //        intent.setDataAndType(fileUri, "vnd.android.document/directory");
@@ -239,6 +333,7 @@ public class DownloadService extends Service {
         return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
     }
+
     private PendingIntent getOpenDirIntent3(File file) {
         Uri uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download");
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -247,6 +342,7 @@ public class DownloadService extends Service {
         intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, uri);
         return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
+
     private PendingIntent getOpenDirIntent4(File file) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.addCategory(Intent.CATEGORY_DEFAULT);
@@ -260,15 +356,15 @@ public class DownloadService extends Service {
         return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
     }
 
-    File newFile(File path ,String name){
-         path = name.equals("")?path:new File(path, name);
+    File newFile(File path, String name) {
+        path = name.equals("") ? path : new File(path, name);
         while (path.exists()) {
-            path = new File(path.getParent(), "jFlower-"+path.getName());
+            path = new File(path.getParent(), "jFlower-" + path.getName());
         }
         return path;
     }
 
-    File moveToDownload(File internalFile){
+    File moveToDownload(File internalFile) {
 //        File internalFile = new File(getFilesDir(), "example.txt");
         File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
         File destFile = newFile(downloadDir, internalFile.getName());
@@ -284,7 +380,7 @@ public class DownloadService extends Service {
             fis.close();
             fos.close();
 
-            MediaScannerConnection.scanFile(this, new String[] { destFile.getPath() }, null, null);
+            MediaScannerConnection.scanFile(this, new String[]{destFile.getPath()}, null, null);
             return destFile;
         } catch (IOException e) {
             e.printStackTrace();

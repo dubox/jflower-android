@@ -1,5 +1,6 @@
 package com.dubox.jflower;
 
+import android.app.DownloadManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -11,11 +12,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.IBinder;
 import android.provider.MediaStore;
 import android.util.Base64;
@@ -24,6 +27,7 @@ import android.widget.Toast;
 
 import com.dubox.jflower.libs.ClipBoardUtil;
 import com.dubox.jflower.libs.Utils;
+import com.dubox.jflower.libs.utilsTrait.Net;
 import com.koushikdutta.async.ByteBufferList;
 import com.koushikdutta.async.DataEmitter;
 import com.koushikdutta.async.callback.CompletedCallback;
@@ -58,8 +62,10 @@ import androidx.appcompat.widget.ThemeUtils;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.FileProvider;
 
+
 public class HttpService extends Service {
 
+    private static final int NOTIFICATION_ID = 1;
     AsyncHttpServer server = new AsyncHttpServer();
 
     NotificationCompat.Builder builder;
@@ -72,7 +78,7 @@ public class HttpService extends Service {
 
     public HttpService() {
 
-//        EventBus.getDefault().register(new MySubscriber());
+        EventBus.getDefault().register(new MySubscriber());
 
     }
 
@@ -105,7 +111,7 @@ public class HttpService extends Service {
 
         Log.i("notification", "ok");
         // Notification ID cannot be 0.
-        startForeground(1, builder.build());
+        startForeground(NOTIFICATION_ID, builder.build());
         startServer();
         notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -234,7 +240,7 @@ public class HttpService extends Service {
         stopServer();
         // 移除通知
         stopForeground(true);
-//        EventBus.getDefault().unregister(new MySubscriber());
+        EventBus.getDefault().unregister(new MySubscriber());
         super.onDestroy();
     }
 
@@ -365,7 +371,6 @@ public class HttpService extends Service {
         // Stop your HTTP server here
         server.stop();
     }
-
 
 
 }

@@ -268,6 +268,9 @@ public class MainActivity extends AppCompatActivity {
                     if (e != null ) {
                         return;
                     }
+                    Log.i("uri", uri);
+                    Log.i("response", response.headers().toString());
+                    Log.i("result", result);
                     HashMap<String, Object> item = new HashMap<>();
                     item.put("name", Utils.urlDecode(response.headers().get("name")));
                     item.put("subName", ip);
@@ -277,9 +280,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     deviceDataList.add(item);
                     handler.sendEmptyMessage(1);
-                    Log.i("uri", uri);
-                    Log.i("response", response.headers().toString());
-                    Log.i("result", result);
+
                 }
             });
         }

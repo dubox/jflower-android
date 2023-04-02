@@ -5,6 +5,7 @@
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
+        android:usesCleartextTraffic="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@drawable/logo"
@@ -55,6 +56,7 @@
                 <action android:name="com.dubox.jflower.ACTION_IMG" />
             </intent-filter>
         </receiver>
+
 
         <service
             android:name=".DownloadService"

@@ -4,6 +4,8 @@ package com.dubox.jflower.libs;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.provider.Settings;
+import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import com.dubox.jflower.libs.utilsTrait.Net;
 
@@ -106,9 +108,21 @@ public class Utils implements Net {
 
     public static String urlDecode(String str){
         try {
-            return URLDecoder.decode( str, "utf-8");
+            return URLDecoder.decode( str+"", "utf-8");
         } catch (UnsupportedEncodingException ex) {
             return str;
         }
+    }
+
+    public static String guessMimeType(String url) {
+        String type = null;
+        String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+        if (extension != null) {
+            type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        }
+        if (type == null) {
+            type = "application/octet-stream";
+        }
+        return type;
     }
 }
