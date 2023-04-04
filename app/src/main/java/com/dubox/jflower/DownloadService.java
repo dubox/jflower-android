@@ -119,18 +119,21 @@ public class DownloadService extends Service {
         Uri fileUri = downloadManager.getUriForDownloadedFile(downloadId);
         if (fileUri != null) {
             try {
-                Intent fileIntent = new Intent(Intent.ACTION_VIEW);
+//                Intent fileIntent = new Intent(Intent.ACTION_VIEW);
 //                        fileIntent.setData(Uri.parse("content://downloads/my_downloads"));
 //                        fileIntent.setData(Uri.parse("content://com.android.externalstorage.documents/document/primary:Download"));
 //                        ContentResolver cr = context.getContentResolver();
-                String mimeType = Utils.guessMimeType(fileUri.toString());
-                Log.i(mimeType, fileUri.toString());
-                Toast.makeText(this, "mimeType:" + mimeType, Toast.LENGTH_LONG).show();
-                fileIntent.setDataAndType(fileUri, mimeType);
-                fileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY);
+//                String mimeType = Utils.guessMimeType(fileUri.toString());
+                String mimeType = downloadManager.getMimeTypeForDownloadedFile(downloadId);
+//                Log.i(mimeType, fileUri.toString());
+//                Toast.makeText(this, "mimeType:" + mimeType, Toast.LENGTH_LONG).show();
+//                fileIntent.setDataAndType(fileUri, mimeType);
+                Intent fileIntent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+//                fileIntent.setDataAndType(fileUri, mimeType);
+//                fileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY);
 
-                this.startActivity(Intent.createChooser(fileIntent, "Choose File Manager").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY));
-
+//                this.startActivity(Intent.createChooser(fileIntent, "Choose File Manager").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY));
+                startActivity(fileIntent);
 
             } catch (ActivityNotFoundException e) {
                 Toast.makeText(this, "无法打开该文件，请到下载目录查看", Toast.LENGTH_SHORT).show();
@@ -171,9 +174,9 @@ public class DownloadService extends Service {
         String url = intent.getStringExtra("fileUrl");
         String fileName = intent.getStringExtra("fileName");
         String key = intent.getStringExtra("key");
-//        String dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+        String dir = newFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),fileName).getAbsolutePath();
 //        File dir = getFilesDir();//.getAbsolutePath();
-        File dir = newFile(getExternalFilesDir(null), fileName);
+//        File dir = newFile(getExternalFilesDir(null), fileName);
 
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent =
@@ -193,13 +196,13 @@ public class DownloadService extends Service {
 //        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
 //        registerReceiver(downloadReceiver, filter);
 
-        getContentResolver().registerContentObserver(
-                Uri.parse("content://downloads/my_downloads"),
-                true,
-                downloadObserver);
+//        getContentResolver().registerContentObserver(
+//                Uri.parse("content://downloads/my_downloads"),
+//                true,
+//                downloadObserver);
         // Start the download
-        execDownload(url, fileName, key);
-//        execDownload(url,fileName,key ,dir);
+//        execDownload(url, fileName, key);
+        execDownload(url,fileName,key ,dir);
 
         return START_NOT_STICKY;
     }
@@ -223,6 +226,7 @@ public class DownloadService extends Service {
     }
 
 
+
     private void execDownload(String url, String fileName, String fileKey) {
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
         request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI);
@@ -242,7 +246,7 @@ public class DownloadService extends Service {
 
     }
 
-    private void execDownload(String url, String fileName, String fileKey, File dir) {
+    private void execDownload(String url, String fileName, String fileKey, String dir) {
         AsyncHttpClient.getDefaultInstance().executeFile(
                 new AsyncHttpRequest(Uri.parse(url), "GET")
                         .setHeader("file_name", Utils.urlEncode(fileName))
@@ -251,7 +255,7 @@ public class DownloadService extends Service {
                         .setHeader("cmd", "getFile")
                         .setHeader("ip", Net.localIp(this))
                         .setHeader("id", Utils.getId(this)),
-                dir.getAbsolutePath(),
+                dir,
                 new AsyncHttpClient.FileCallback() {
                     @Override
                     public void onCompleted(Exception e, AsyncHttpResponse source, File result) {
@@ -277,10 +281,10 @@ public class DownloadService extends Service {
 //                        response = moveToDownload(response);
                         // Download complete, show notification
                         notificationBuilder.setProgress(0, 0, false)
-                                .setContentTitle("接收完毕")
-                                .setContentText("点击查看")
+                                .setContentTitle("点击查看")
+                                .setContentText("接收完毕（保存在下载目录）")
                                 .setAutoCancel(true)
-                                .setContentIntent(getOpenDirIntent(response));
+                                .setContentIntent(getOpenFileIntent(response));
 //                                .setContentIntent(getOpenFileIntent(response));
 //                                .addAction(imgAction(receivedImg));
                         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
@@ -309,6 +313,7 @@ public class DownloadService extends Service {
         Uri uri;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             uri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", file);
+//            uri = Uri.fromFile(file);
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         } else {
             uri = Uri.fromFile(file);
@@ -319,12 +324,8 @@ public class DownloadService extends Service {
 
     private PendingIntent getOpenDirIntent(File file) {
 //
-//    <external-path name="com.dubox.jflower.fileprovider" path="Download/"/>
-        Log.i("fileprovider", getApplicationContext().getPackageName() + ".fileprovider");
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        File dir = newFile(file, "/");
-        Log.i("dir", dir.getAbsolutePath());
-        Uri fileUri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", dir);
+        Uri fileUri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", file);
 //        Uri fileUri = Uri.fromFile(dir);
 //        intent.setDataAndType(fileUri, "vnd.android.document/directory");
         intent.setDataAndType(fileUri, "*/*");
@@ -335,7 +336,9 @@ public class DownloadService extends Service {
     }
 
     private PendingIntent getOpenDirIntent3(File file) {
+//        Uri uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download");
         Uri uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download");
+//        Uri uri = Uri.parse("content://downloads/all_downloads");
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
@@ -358,8 +361,10 @@ public class DownloadService extends Service {
 
     File newFile(File path, String name) {
         path = name.equals("") ? path : new File(path, name);
+        int i = 1;
         while (path.exists()) {
-            path = new File(path.getParent(), "jFlower-" + path.getName());
+            path = new File(path.getParent(), "("+i+")" + path.getName());
+            i++;
         }
         return path;
     }
