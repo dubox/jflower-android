@@ -175,6 +175,7 @@ public class DownloadService extends Service {
         String fileName = intent.getStringExtra("fileName");
         String key = intent.getStringExtra("key");
         String dir = newFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),fileName).getAbsolutePath();
+
 //        File dir = getFilesDir();//.getAbsolutePath();
 //        File dir = newFile(getExternalFilesDir(null), fileName);
 
@@ -287,10 +288,15 @@ public class DownloadService extends Service {
                                 .setContentIntent(getOpenFileIntent(response));
 //                                .setContentIntent(getOpenFileIntent(response));
 //                                .addAction(imgAction(receivedImg));
-                        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-                        //"com.dubox.jflower.fileprovider"
+                        notificationManager.notify(1, notificationBuilder.build());
 
-//                        stopSelf();
+//                        notificationBuilder.setContentText( fileName + "("+Utils.formatFileSize(size)+")")
+//                                .setContentTitle("来自："+name)
+//                                .setSubText(ip)
+//                                .addAction(fileAction(response));
+//                        notificationManager.notify(1, notificationBuilder.build());
+
+                        stopSelf();
                     }
 
 
@@ -301,11 +307,20 @@ public class DownloadService extends Service {
                                 .setContentText("接收失败")
                                 .setAutoCancel(true);
                         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-//                        stopSelf();
+                        stopSelf();
                     }
 
                 });
 
+    }
+
+    private NotificationCompat.Action fileAction(File file) {
+        PendingIntent pendingIntent = getOpenFileIntent(file);
+        return new NotificationCompat.Action.Builder(
+                R.drawable.ic_menu_camera,  // 图标
+                "点击查看",  // 操作按钮标题
+                pendingIntent  // 点击操作按钮时触发的 PendingIntent
+        ).build();
     }
 
     private PendingIntent getOpenFileIntent(File file) {

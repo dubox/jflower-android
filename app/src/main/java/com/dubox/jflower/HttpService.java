@@ -167,7 +167,7 @@ public class HttpService extends Service {
         PendingIntent pendingIntent = shareFile( uri);
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
-                "SHARE",  // 操作按钮标题
+                "分享",  // 操作按钮标题
                 pendingIntent  // 点击操作按钮时触发的 PendingIntent
         ).build();
     }
@@ -199,7 +199,7 @@ public class HttpService extends Service {
         PendingIntent pendingIntent = shareText( text);
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
-                "SHARE",  // 操作按钮标题
+                "分享",  // 操作按钮标题
                 pendingIntent  // 点击操作按钮时触发的 PendingIntent
         ).build();
     }
@@ -208,7 +208,7 @@ public class HttpService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
-                "OPEN",  // 操作按钮标题
+                "打开链接",  // 操作按钮标题
                 pendingIntent  // 点击操作按钮时触发的 PendingIntent
         ).build();
     }
