@@ -60,94 +60,6 @@ public class DownloadService extends Service {
 
     long downloadingId;
 
-    private ContentObserver downloadObserver = new ContentObserver(new Handler()) {
-        @Override
-        public void onChange(boolean selfChange) {
-            super.onChange(selfChange);
-//            Intent fileIntent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
-//        fileIntent.setData(downloadManager.getUriForDownloadedFile(downloadId));
-//        fileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//        startActivity(fileIntent);
-            DownloadManager downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            DownloadManager.Query query = new DownloadManager.Query();
-            query.setFilterById(downloadingId);
-
-            Cursor cursor = downloadManager.query(query);
-            if (cursor.moveToFirst()) {
-                int index = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                int status = cursor.getInt(index);
-                switch (status) {
-                    case DownloadManager.STATUS_RUNNING:
-//                    index = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
-//                    int totalSize = cursor.getInt(index);
-//                    index = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
-//                    int downloadSize = cursor.getInt(index);
-//                    int progress = downloadSize * 100 / totalSize;
-//                    // 更新下载进度
-//                    notificationBuilder.setProgress(100, progress, false);
-//                    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-                        break;
-                    case DownloadManager.STATUS_SUCCESSFUL:
-                        // 下载完成
-                        Log.i("progress", "onSuccess");
-                    openFile(downloadManager,downloadingId);
-//                        try {
-//                            downloadManager.openDownloadedFile(downloadingId);
-//
-//                        } catch (FileNotFoundException e) {
-//                            throw new RuntimeException(e);
-//                        }
-
-//                            .setContentTitle("接收完毕")
-//                            .setContentText("点击查看")
-//                            .setAutoCancel(true)
-//                            .setContentIntent(getOpenDirIntent(response));
-////                                .setContentIntent(getOpenFileIntent(response));
-////                                .addAction(imgAction(receivedImg));
-//                    notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
-                        break;
-                    case DownloadManager.STATUS_FAILED:
-                        // 下载失败
-                        break;
-                }
-            }
-            cursor.close();
-        }
-    };
-
-    private void openFile(DownloadManager downloadManager, long downloadId) {
-        Uri fileUri = downloadManager.getUriForDownloadedFile(downloadId);
-        if (fileUri != null) {
-            try {
-//                Intent fileIntent = new Intent(Intent.ACTION_VIEW);
-//                        fileIntent.setData(Uri.parse("content://downloads/my_downloads"));
-//                        fileIntent.setData(Uri.parse("content://com.android.externalstorage.documents/document/primary:Download"));
-//                        ContentResolver cr = context.getContentResolver();
-//                String mimeType = Utils.guessMimeType(fileUri.toString());
-                String mimeType = downloadManager.getMimeTypeForDownloadedFile(downloadId);
-//                Log.i(mimeType, fileUri.toString());
-//                Toast.makeText(this, "mimeType:" + mimeType, Toast.LENGTH_LONG).show();
-//                fileIntent.setDataAndType(fileUri, mimeType);
-                Intent fileIntent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
-//                fileIntent.setDataAndType(fileUri, mimeType);
-//                fileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY);
-
-//                this.startActivity(Intent.createChooser(fileIntent, "Choose File Manager").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY));
-                startActivity(fileIntent);
-
-            } catch (ActivityNotFoundException e) {
-                Toast.makeText(this, "无法打开该文件，请到下载目录查看", Toast.LENGTH_SHORT).show();
-                Intent fileIntent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
-                fileIntent.setData(fileUri);
-                fileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                this.startActivity(fileIntent);
-//                        openDownloadedFile( context,  downloadId);
-            }
-        } else {
-            // 文件不存在，尝试重新下载
-            Toast.makeText(this, "文件不存在，请重新下载", Toast.LENGTH_SHORT).show();
-        }
-    }
 
     /**
      * 创建通知通道
@@ -193,14 +105,7 @@ public class DownloadService extends Service {
 
         startForeground(NOTIFICATION_ID, notificationBuilder.build());
 
-//        downloadReceiver = new DownloadReceiver();
-//        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-//        registerReceiver(downloadReceiver, filter);
 
-//        getContentResolver().registerContentObserver(
-//                Uri.parse("content://downloads/my_downloads"),
-//                true,
-//                downloadObserver);
         // Start the download
 //        execDownload(url, fileName, key);
         execDownload(url,fileName,key ,dir);
@@ -217,11 +122,11 @@ public class DownloadService extends Service {
     @Override
     public void onDestroy() {
         Log.e("DownloadService", "onDestroy");
-        if (downloadReceiver != null) {
-            unregisterReceiver(downloadReceiver);
-            downloadReceiver = null;
-        }
-        getContentResolver().unregisterContentObserver(downloadObserver);
+//        if (downloadReceiver != null) {
+//            unregisterReceiver(downloadReceiver);
+//            downloadReceiver = null;
+//        }
+//        getContentResolver().unregisterContentObserver(downloadObserver);
 
         super.onDestroy();
     }
@@ -258,6 +163,8 @@ public class DownloadService extends Service {
                         .setHeader("id", Utils.getId(this)),
                 dir,
                 new AsyncHttpClient.FileCallback() {
+
+                    public int prev=0;
                     @Override
                     public void onCompleted(Exception e, AsyncHttpResponse source, File result) {
                         if (e != null) {
@@ -271,6 +178,8 @@ public class DownloadService extends Service {
                     @Override
                     public void onProgress(AsyncHttpResponse response, long downloaded, long total) {
                         int progress = (int) (downloaded * 100 / total);
+                        if(progress - prev < 10 && progress!=100)return;
+                        prev = progress;
                         Log.i("progress", progress + "");
                         notificationBuilder.setProgress(100, progress, false);
                         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
@@ -285,9 +194,9 @@ public class DownloadService extends Service {
                                 .setContentTitle("点击查看")
                                 .setContentText("接收完毕（保存在下载目录）")
                                 .setAutoCancel(true)
-                                .setContentIntent(getOpenFileIntent(response));
+                                .setContentIntent(getOpenFileIntent(response))
 //                                .setContentIntent(getOpenFileIntent(response));
-//                                .addAction(imgAction(receivedImg));
+                                .addAction(fileAction(response));
                         notificationManager.notify(1, notificationBuilder.build());
 
 //                        notificationBuilder.setContentText( fileName + "("+Utils.formatFileSize(size)+")")
@@ -315,12 +224,32 @@ public class DownloadService extends Service {
     }
 
     private NotificationCompat.Action fileAction(File file) {
-        PendingIntent pendingIntent = getOpenFileIntent(file);
+        PendingIntent pendingIntent = shareFile(file);
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
-                "点击查看",  // 操作按钮标题
+                "分享",  // 操作按钮标题
                 pendingIntent  // 点击操作按钮时触发的 PendingIntent
         ).build();
+    }
+
+    public PendingIntent shareFile(File file){
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        String type = getMimeType(file.getAbsolutePath())+"";
+        Log.i("type",type);
+        if(!type.startsWith("image/")) type = "*/*";
+        shareIntent.setType(type);
+        Uri uri;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            uri = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".fileprovider", file);
+//            uri = Uri.fromFile(file);
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } else {
+            uri = Uri.fromFile(file);
+        }
+        shareIntent.putExtra(Intent.EXTRA_STREAM, uri);//uriToPrivate(uri)
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        return PendingIntent.getActivity(this, 0, Intent.createChooser(shareIntent, "Share"), PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private PendingIntent getOpenFileIntent(File file) {

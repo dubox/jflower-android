@@ -145,7 +145,7 @@ public class HttpService extends Service {
 
     }
 
-    public PendingIntent shareFile( Uri uri){
+    public PendingIntent shareImg( Uri uri){
         Log.i("Share",uri.toString());
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
@@ -164,7 +164,7 @@ public class HttpService extends Service {
     }
 
     private NotificationCompat.Action imgAction(Uri uri) {
-        PendingIntent pendingIntent = shareFile( uri);
+        PendingIntent pendingIntent = shareImg( uri);
         return new NotificationCompat.Action.Builder(
                 R.drawable.ic_menu_camera,  // 图标
                 "分享",  // 操作按钮标题
