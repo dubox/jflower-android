@@ -1,6 +1,9 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <external-path name="external_files" path="."/>
     <external-files-path name="external_files" path="." />
-    <external-path name="com.dubox.jflower.fileprovider" path="Download/"/>
-    <external-path name="external_files" path="Download/"/>
+
+
+<!--    <root-path name="download" path="Download/"/>
+设置共享下载目录 name不能为download 可能因为跟真实目录冲突，也不能与上面的name同名-->
+    <external-path name="external_files2" path="Download/"/>
 </paths>

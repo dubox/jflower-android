@@ -172,10 +172,12 @@ public class HttpService extends Service {
         ).build();
     }
 
-    private NotificationCompat.Action fileAction(String ip,String key,String fileName) {
+    private NotificationCompat.Action fileAction(String ip,String key,String fileName,String serverName) {
         // 创建下载操作的 PendingIntent
         Intent downloadIntent = new Intent(this, DownloadService.class);
         downloadIntent.putExtra("fileUrl", "http://"+ip+":8891/getFile");
+        downloadIntent.putExtra("ip", ip);
+        downloadIntent.putExtra("serverName", serverName);
         downloadIntent.putExtra("key", key);
         downloadIntent.putExtra("fileName", fileName);
 
@@ -302,7 +304,7 @@ public class HttpService extends Service {
                                 getContentResolver(),
                                 bitmap,
                                 "jFlower-" + (new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())),
-                                "From " + request.getHeaders().get("ip")
+                                "From " + name +"("+ ip+")\n[via jFlower]"
                         );
                         // 如果保存成功，则返回图像的 URI
                         if (savedImagePath != null) {
@@ -337,7 +339,7 @@ public class HttpService extends Service {
                                 .clearActions()
                                 .setLargeIcon(null)
                                 .setWhen(System.currentTimeMillis())
-                                .addAction(fileAction(ip,request.getHeaders().get("key") ,fileName));
+                                .addAction(fileAction(ip,request.getHeaders().get("key") ,fileName ,name));
 
                         notificationManager.notify(1,builder.build());
                         toast("接收到文件请求");

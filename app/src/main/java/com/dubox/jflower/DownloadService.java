@@ -22,6 +22,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
@@ -58,6 +59,9 @@ public class DownloadService extends Service {
 
     private DownloadReceiver downloadReceiver;
 
+    String serverName;
+    String ip;
+
     long downloadingId;
 
 
@@ -86,6 +90,8 @@ public class DownloadService extends Service {
         String url = intent.getStringExtra("fileUrl");
         String fileName = intent.getStringExtra("fileName");
         String key = intent.getStringExtra("key");
+         ip = intent.getStringExtra("ip");
+         serverName = intent.getStringExtra("serverName");
         String dir = newFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),fileName).getAbsolutePath();
 
 //        File dir = getFilesDir();//.getAbsolutePath();
@@ -189,10 +195,11 @@ public class DownloadService extends Service {
                     public void onSuccess(File response) {
                         Log.i("progress", "onSuccess");
 //                        response = moveToDownload(response);
+                        String tarText = addToMediaStore(response)?"相册":"下载目录";
                         // Download complete, show notification
                         notificationBuilder.setProgress(0, 0, false)
                                 .setContentTitle("点击查看")
-                                .setContentText("接收完毕（保存在下载目录）")
+                                .setContentText("接收完毕（已保存到"+tarText+"）")
                                 .setAutoCancel(true)
                                 .setContentIntent(getOpenFileIntent(response))
 //                                .setContentIntent(getOpenFileIntent(response));
@@ -262,8 +269,21 @@ public class DownloadService extends Service {
         } else {
             uri = Uri.fromFile(file);
         }
+
         intent.setDataAndType(uri, getMimeType(file.getAbsolutePath()));
         return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    private boolean addToMediaStore(File file){
+        try {
+            if(getMimeType(file.getAbsolutePath()).startsWith("image/")) {
+                MediaStore.Images.Media.insertImage(getContentResolver(), file.getAbsolutePath(), file.getName(), "From " + serverName + "(" + ip + ")\n[via jFlower]");
+                return true;
+            }
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        return false;
     }
 
     private PendingIntent getOpenDirIntent(File file) {
@@ -305,12 +325,13 @@ public class DownloadService extends Service {
 
     File newFile(File path, String name) {
         path = name.equals("") ? path : new File(path, name);
+        File tmp = path;
         int i = 1;
-        while (path.exists()) {
-            path = new File(path.getParent(), "("+i+")" + path.getName());
+        while (tmp.exists()) {
+            tmp = new File(path.getParent(), "("+i+")" + path.getName());
             i++;
         }
-        return path;
+        return tmp;
     }
 
     File moveToDownload(File internalFile) {
