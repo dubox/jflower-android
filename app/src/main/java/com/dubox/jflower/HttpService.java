@@ -270,7 +270,7 @@ public class HttpService extends Service {
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
 
                 Log.i("request.getPath()", request.getPath());
-                String name = request.getHeaders().get("name");
+                String name = Utils.urlDecode( request.getHeaders().get("name"));
                 String ip = request.getHeaders().get("ip");
                 switch (request.getPath()) {
                     case "/text": {
