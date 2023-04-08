@@ -114,7 +114,12 @@ public class GalleryFragment extends Fragment {
                         }
                         System.out.println("I got a JSONObject: " + result);
                         try {
+                            if((int)result.get("code") != 0){
+                                Toast.makeText(getContext(),(String)result.get("message"),Toast.LENGTH_LONG).show();
+                                return;
+                            }
                             JSONObject data = (JSONObject) result.get("data");
+                            galleryViewModel.setNewV((String) data.get("buildVersion"));
                             galleryViewModel.setBtnShow((boolean)data.get("buildHaveNewVersion"));
                         } catch (JSONException ex) {
                             ex.printStackTrace();
