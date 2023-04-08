@@ -21,6 +21,8 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Menu;
+import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Toast;
@@ -133,7 +135,22 @@ public class MainActivity extends AppCompatActivity {
                 deviceDataList,
                 R.layout.device_item,
                 new String[]{"name","subName"},
-                new int[]{R.id.device_name,R.id.device_sub_name});
+                new int[]{R.id.device_name,R.id.device_sub_name}){
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                Button callButton = view.findViewById(R.id.openSharePage);
+
+                // 获取数据
+                HashMap<String, Object> itemData = (HashMap<String, Object>) getItem(position);
+                final String ip = (String) itemData.get("subName");
+
+                // 绑定数据到按钮
+                callButton.setTag(ip);
+
+                return view;
+            }
+        };
 
 
         freshIp();
@@ -181,10 +198,10 @@ public class MainActivity extends AppCompatActivity {
         deviceDetect();
         act = Act.NONE;
         handleShare();
-        getClipboardData();
+//        getClipboardData();
     }
 
-    public String getClipboardData() {
+    public String getClipboardData() {Log.i("getClipboardData", act.toString());
         if(act == Act.SHARE)return "";
 
         act = Act.PASTE;
@@ -441,6 +458,13 @@ Log.i("img_path",img_path);
 
     public void openDownloadPage(View view) {
         Uri uri = Uri.parse("https://pan.baidu.com/s/10b4SFgZnWGTO6B0BzwNtXA?pwd=tts5");
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+        startActivity(intent);
+    }
+
+    public void openSharePage(View view) {
+        String ip = (String)view.getTag();
+        Uri uri = Uri.parse("http://"+ip+":8891/share");
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
         startActivity(intent);
     }

@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="70dp">
+    android:layout_height="70dp"
+    android:descendantFocusability="blocksDescendants">
 
 
     <androidx.cardview.widget.CardView
@@ -39,6 +40,22 @@
             android:textAlignment="center"
             android:textColor="#979797"
             android:textSize="14dp" />
+
+        <Button
+            android:id="@+id/openSharePage"
+            android:onClick="openSharePage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginEnd="25dp"
+            android:background="#00FFFFFF"
+            android:drawablePadding="0dp"
+            android:gravity="center_horizontal|center_vertical"
+            android:outlineProvider="none"
+            android:textSize="0sp"
+            app:icon="@android:drawable/ic_menu_set_as"
+            app:iconGravity="textTop"
+            app:iconTint="@color/purple_200" />
     </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

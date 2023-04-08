@@ -1,10 +1,14 @@
 package com.dubox.jflower.libs;
 
 
+import android.Manifest;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
+
+import androidx.core.content.ContextCompat;
 
 public class ClipBoardUtil {
     /**
