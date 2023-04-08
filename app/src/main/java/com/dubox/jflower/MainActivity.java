@@ -461,7 +461,7 @@ Log.i("img_path",img_path);
 
 
     public void openDownloadPage(View view) {
-        Uri uri = Uri.parse("https://pan.baidu.com/s/10b4SFgZnWGTO6B0BzwNtXA?pwd=tts5");
+        Uri uri = Uri.parse("https://www.pgyer.com/jflower");
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
         startActivity(intent);
     }
