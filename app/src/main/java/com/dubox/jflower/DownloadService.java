@@ -184,7 +184,7 @@ public class DownloadService extends Service {
                     @Override
                     public void onProgress(AsyncHttpResponse response, long downloaded, long total) {
                         int progress = (int) (downloaded * 100 / total);
-                        if(progress - prev < 10 && progress!=100)return;
+                        if(progress - prev < 10 && progress!=100 && prev != 0)return;
                         prev = progress;
                         Log.i("progress", progress + "");
                         notificationBuilder.setProgress(100, progress, false);
@@ -276,7 +276,8 @@ public class DownloadService extends Service {
 
     private boolean addToMediaStore(File file){
         try {
-            if(getMimeType(file.getAbsolutePath()).startsWith("image/")) {
+            String mime = getMimeType(file.getAbsolutePath())+"";
+            if(mime.startsWith("image/")) {
                 MediaStore.Images.Media.insertImage(getContentResolver(), file.getAbsolutePath(), file.getName(), "From " + serverName + "(" + ip + ")\n[via jFlower]");
                 return true;
             }

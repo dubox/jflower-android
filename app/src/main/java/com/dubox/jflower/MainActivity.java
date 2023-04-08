@@ -318,7 +318,7 @@ public class MainActivity extends AppCompatActivity {
             InputStream fis = getContentResolver().openInputStream(data);
             Log.i("fis.available()",fis.available()+"");
             HashMap<String,Object> map = new HashMap<String,Object>();
-            map.put("file_name",Uri.parse(fPath).getLastPathSegment());
+            map.put("file_name",Utils.urlEncode(Uri.parse(fPath).getLastPathSegment()));
 
             deviceSend( ip , "file",
             new StreamBody(fis  ,fis.available()),
@@ -400,11 +400,15 @@ public class MainActivity extends AppCompatActivity {
         Intent intent=getIntent();
         String action=intent.getAction();
         String type=intent.getType();
+
         if(action != null && action.equals(Intent.ACTION_SEND)){
             act = Act.SHARE;
             Log.i("handleShare","111111111111");
             Log.i("type",type);
-            if(Objects.equals(type, "text/plain")){
+            Uri shareUri = (Uri)intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if( shareUri != null)
+                Log.i("ShareUri",shareUri.getPath());
+            if(Objects.equals(type, "text/plain") && shareUri == null){
 
                 Log.i("text/plain","ttt:"+intent.getStringExtra(Intent.EXTRA_TEXT));
                 waitingText = intent.getStringExtra(Intent.EXTRA_TEXT);
@@ -416,11 +420,11 @@ public class MainActivity extends AppCompatActivity {
 //            if()
             else {
                 //application/vnd.android.package-archive
-                waitingImage = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                waitingImage = shareUri;//intent.getParcelableExtra(Intent.EXTRA_STREAM);
                 //getPathForMedia(waitingImage.toString());
 //                getPathForMedia(waitingImage.getPath());
                 Log.i("image/*",waitingImage.toString());
-                Log.i("getPath",waitingImage.getPath());
+
                 sharingType = SharingType.IMAGE;
 
             }
