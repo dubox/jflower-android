@@ -43,6 +43,9 @@ public class GalleryViewModel extends ViewModel {
     public void setBtnShow(int show){
         showUpBtn.postValue( show==0? View.INVISIBLE:View.VISIBLE);
     }
+    public void setBtnShow(boolean show){
+        showUpBtn.postValue( show? View.VISIBLE:View.INVISIBLE);
+    }
 
     public LiveData<Integer> getBtnShow() {
         return showUpBtn;

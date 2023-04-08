@@ -25,6 +25,8 @@ import com.dubox.jflower.databinding.FragmentGalleryBinding;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.koushikdutta.async.http.AsyncHttpRequest;
 import com.koushikdutta.async.http.AsyncHttpResponse;
+import com.koushikdutta.async.http.body.MultipartFormDataBody;
+import com.koushikdutta.async.http.body.UrlEncodedFormBody;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -80,12 +82,20 @@ public class GalleryFragment extends Fragment {
     protected void getNewV(){
         //
 //        System.out.println(View.);
-        AsyncHttpClient.getDefaultInstance().executeJSONObject(new AsyncHttpRequest(
+        MultipartFormDataBody body = new MultipartFormDataBody();
+        body.addStringPart("_api_key","f8e52a2bef403133435ebdea173348b7");
+        body.addStringPart("appKey","cb656120c79a59a65541ff817577a29b");
+        body.addStringPart("buildVersion",pInfo.versionName);
+
+        AsyncHttpRequest req = new AsyncHttpRequest(
                 Uri.parse(
 //                        "https://gitee.com/dubox/jflower-android/raw/master/version.json"
 //                        "https://raw.githubusercontent.com/dubox/jflower-android/master/version.json"
-                        "https://dubox.github.io/jflower-android/version.json"
-                ), "GET"), new AsyncHttpClient.JSONObjectCallback() {
+//                        "https://dubox.github.io/jflower-android/version.json"
+                        "https://www.pgyer.com/apiv2/app/check"
+                ), "POST");
+        req.setBody(body);
+        AsyncHttpClient.getDefaultInstance().executeJSONObject(req, new AsyncHttpClient.JSONObjectCallback() {
 
             // Callback is invoked with any exceptions/errors, and the result, if available.
             @Override
@@ -104,8 +114,8 @@ public class GalleryFragment extends Fragment {
                         }
                         System.out.println("I got a JSONObject: " + result);
                         try {
-                            galleryViewModel.setNewV(result.get("name").toString());
-                            galleryViewModel.setBtnShow((int)result.get("code") - pInfo.versionCode);
+                            JSONObject data = (JSONObject) result.get("data");
+                            galleryViewModel.setBtnShow((boolean)data.get("buildHaveNewVersion"));
                         } catch (JSONException ex) {
                             ex.printStackTrace();
                         }
