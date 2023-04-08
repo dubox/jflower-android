@@ -194,6 +194,7 @@ public class DownloadService extends Service {
 
                     public void onSuccess(File response) {
                         Log.i("progress", "onSuccess");
+                        prev = 0;
 //                        response = moveToDownload(response);
                         String tarText = addToMediaStore(response)?"相册":"下载目录";
                         // Download complete, show notification
@@ -218,6 +219,7 @@ public class DownloadService extends Service {
 
                     public void onFailure() {
                         Log.i("progress", "onFailure");
+                        prev = 0;
                         // Download failed, show notification
                         notificationBuilder.setProgress(0, 0, false)
                                 .setContentText("接收失败")
