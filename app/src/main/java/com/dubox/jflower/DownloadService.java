@@ -140,6 +140,7 @@ public class DownloadService extends Service {
 
 
     private void execDownload(String url, String fileName, String fileKey) {
+
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
         request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_MOBILE | DownloadManager.Request.NETWORK_WIFI);
         request.setTitle(fileName);
@@ -173,6 +174,7 @@ public class DownloadService extends Service {
                     public int prev=0;
                     @Override
                     public void onCompleted(Exception e, AsyncHttpResponse source, File result) {
+                        prev = 0;
                         if (e != null) {
                             e.printStackTrace();
                             onFailure();
@@ -184,7 +186,7 @@ public class DownloadService extends Service {
                     @Override
                     public void onProgress(AsyncHttpResponse response, long downloaded, long total) {
                         int progress = (int) (downloaded * 100 / total);
-                        if(progress - prev < 10 && progress!=100 && prev != 0)return;
+                        if(progress - prev < 5 && progress!=100 && prev != 0)return;
                         prev = progress;
                         Log.i("progress", progress + "");
                         notificationBuilder.setProgress(100, progress, false);
@@ -194,7 +196,6 @@ public class DownloadService extends Service {
 
                     public void onSuccess(File response) {
                         Log.i("progress", "onSuccess");
-                        prev = 0;
 //                        response = moveToDownload(response);
                         String tarText = addToMediaStore(response)?"相册":"下载目录";
                         // Download complete, show notification
@@ -219,7 +220,6 @@ public class DownloadService extends Service {
 
                     public void onFailure() {
                         Log.i("progress", "onFailure");
-                        prev = 0;
                         // Download failed, show notification
                         notificationBuilder.setProgress(0, 0, false)
                                 .setContentText("接收失败")
@@ -271,8 +271,9 @@ public class DownloadService extends Service {
         } else {
             uri = Uri.fromFile(file);
         }
-
-        intent.setDataAndType(uri, getMimeType(file.getAbsolutePath()));
+        String mime = getMimeType(file.getAbsolutePath());
+        Log.i("mime",mime);
+        intent.setDataAndType(uri, mime);
         return PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 

@@ -234,7 +234,13 @@ public class MainActivity extends AppCompatActivity {
             public void handleMessage(Message msg) {
                 switch (msg.what) {
                     case 1:
-                        adapter.notifyDataSetChanged();
+                        // 在主线程中提交一个Runnable来更新适配器
+                        post(new Runnable() {
+                            @Override
+                            public void run() {
+                                adapter.notifyDataSetChanged();
+                            }
+                        });
                         break;
                     case 10:
                     case 11:
@@ -252,6 +258,7 @@ public class MainActivity extends AppCompatActivity {
         deviceListCleared = false;
         HashMap<String, Object> item = new HashMap<>();
         item.put("name", "未检测到设备");
+        item.put("subName", "");
 
         deviceDataList.add(item);
     }
