@@ -197,8 +197,9 @@ public class MainActivity extends AppCompatActivity {
         Log.i("onResume", "000000000000");
         deviceDetect();
         act = Act.NONE;
-        handleShare();
+//        handleShare();
 //        getClipboardData();
+        Log.i("sharingType",sharingType.toString());
     }
 
     public String getClipboardData() {Log.i("getClipboardData", act.toString());
@@ -206,8 +207,8 @@ public class MainActivity extends AppCompatActivity {
 
         act = Act.PASTE;
         Log.i("paste", ClipBoardUtil.paste(MainActivity.this));
-        sharingType = SharingType.TEXT;
-        return waitingText = ClipBoardUtil.paste(MainActivity.this);
+//        sharingType = SharingType.TEXT;
+        return ClipBoardUtil.paste(MainActivity.this);
 
     }
 
@@ -402,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
         Log.i("ip", localIp = Net.localIp(this));
     }
 
-    private void handleShare(){
+    protected void handleShare(){
 
         Intent intent=getIntent();
         String action=intent.getAction();
@@ -443,6 +444,8 @@ public class MainActivity extends AppCompatActivity {
 
 //
 //            }
+        }else {
+            sharingType = SharingType.NONE;
         }
     }
 
