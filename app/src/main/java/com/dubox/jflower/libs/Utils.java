@@ -3,6 +3,8 @@ package com.dubox.jflower.libs;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.provider.Settings;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
@@ -29,6 +31,18 @@ public class Utils implements Net {
 
    public static String getName(){
        return Settings.Secure.getString(ActivityManager.getTopActivity().getContentResolver(), "bluetooth_name");
+   }
+
+    /**
+     * 手机存储分享
+     * @param context
+     * @return String
+     */
+   public static String getStorageShare(Context context){
+       return settingGet(context,"storageShare","0");
+   }
+   public static boolean setStorageShare(String value){
+       return settingSet("storageShare",value);
    }
 
 
@@ -124,5 +138,30 @@ public class Utils implements Net {
             type = "application/octet-stream";
         }
         return type;
+    }
+
+    public static String removeStart(String str, String remove) {
+        if (str != null && remove != null && str.startsWith(remove)) {
+            return str.substring(remove.length());
+        }
+        return str;
+    }
+
+    public static boolean isValidIpAddress(String ipAddress) {
+        String regex = "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:\\d{1,5}$";
+        return ipAddress.matches(regex);
+    }
+
+    public static ColorMatrixColorFilter getGrayFilter() {
+        ColorMatrix cm = new ColorMatrix();
+//        cm.setSaturation(0);
+        float[] matrix = {
+                0.33f, 0.33f, 0.33f, 0, 0,
+                0.33f, 0.33f, 0.33f, 0, 0,
+                0.33f, 0.33f, 0.33f, 0, 0,
+                0, 0, 0, 1, 0
+        };
+        cm.set(matrix);
+        return new ColorMatrixColorFilter(cm);
     }
 }

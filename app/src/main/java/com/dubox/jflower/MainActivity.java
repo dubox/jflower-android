@@ -483,5 +483,12 @@ Log.i("img_path",img_path);
         startActivity(intent);
     }
 
+    public String getLocalIp(){
+        if(localIp.equals("")){
+            freshIp();
+        }
+        return localIp;
+    }
+
 
 }

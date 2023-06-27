@@ -41,10 +41,12 @@ import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
 import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.greenrobot.eventbus.EventBus;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,6 +56,8 @@ import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -75,6 +79,8 @@ public class HttpService extends Service {
     Uri receivedImg;
 
     static boolean serviceIsLive = false;
+
+    private static final String SHARE_ROOT_DIR = Environment.getExternalStorageDirectory().getAbsolutePath();
 
     public HttpService() {
 
@@ -246,13 +252,24 @@ public class HttpService extends Service {
         super.onDestroy();
     }
 
+    private boolean checkRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response){
+        Log.i("host",request.getHeaders().get("host"));
+        if( Utils.isValidIpAddress(request.getHeaders().get("host")))return true;
+        response.code(500);
+        response.send("Bad request!");
+        return false;
+    }
+
     private void startServer() {
         // Create and start your HTTP server here
 
 
-        server.get("/detect", new HttpServerRequestCallback() {
+        server.get("/.*", new HttpServerRequestCallback() {
             @Override
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
+
+                if(!checkRequest(request ,response))return;
+
                 if (request.getPath().equals("/detect")) {
                     response.getHeaders().set("id", Utils.getId());
                     try {
@@ -261,6 +278,52 @@ public class HttpService extends Service {
                         response.getHeaders().set("name", Utils.getName() );
                     }
                 }
+                if(request.getPath().startsWith("/share")){
+                    if(Utils.getStorageShare(HttpService.this) != "1"){
+                        response.code(501);
+                        response.send("Bad request!");
+                        return;
+                    }
+                    String uri = Utils.removeStart(Utils.removeStart(request.getPath(), "/share"),"/");
+                    String filePath = SHARE_ROOT_DIR + File.separator + uri;
+                    File file = new File(filePath);
+                    if (file.isDirectory()) { // 如果是目录，列出所有文件并返回
+                        file.setReadable(true);
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("<html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head><body><ul>");
+                        List<File> files = Arrays.asList(file.listFiles(new FileFilter() {
+                            @Override
+                            public boolean accept(File file) {
+                                Log.i("file:", file.getName());
+                                return true;
+                            }
+                        }));
+                        files.sort(Comparator.comparing(File::getName));
+                        for (File child : files) {
+
+                            String relativePath = Utils.removeStart(child.getAbsolutePath(), SHARE_ROOT_DIR);
+                            sb.append("<li><a href=\"").append("/share/"+Utils.removeStart(relativePath,"/")).append("\">").append(child.getName()).append("</li>");
+                        }
+                        sb.append("</ul></body></html>");
+                        response.send(sb.toString());
+                    } else if (file.exists()) { // 如果是文件，返回文件内容
+                        response.sendFile(file);
+//                        try {
+////                            InputStream is = FileUtils.openInputStream(file);
+////                            byte[] bytes = IOUtils.toByteArray(is);
+////                            response.send(Utils.guessMimeType(filePath), bytes);
+//                            response.sendFile(file);
+////                            is.close();
+//                        } catch (IOException e) {
+//                            response.code(500);
+//                            response.send("Internal Server Error: " + e.getMessage());
+//                        }
+                    } else {
+                        response.code(404);
+                        response.send("File not found.");
+                    }
+                    return;
+                }
                 response.send("jFlower (局发) is running ...");
             }
         });
@@ -268,6 +331,7 @@ public class HttpService extends Service {
         server.post("/.*", new HttpServerRequestCallback() {
             @Override
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
+                if(!checkRequest(request ,response))return;
 
                 Log.i("request.getPath()", request.getPath());
                 String name = Utils.urlDecode( request.getHeaders().get("name"));

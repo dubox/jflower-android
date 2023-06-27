@@ -7,6 +7,19 @@
     tools:context=".ui.home.HomeFragment">
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/share"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="100dp"
+        android:layout_marginRight="15dp"
+        android:contentDescription="@string/refresh"
+        app:backgroundTint="@color/gray"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:srcCompat="@android:drawable/ic_menu_share" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -14,9 +27,11 @@
         android:layout_marginBottom="20dp"
         android:layout_marginRight="15dp"
         android:contentDescription="@string/refresh"
+        app:backgroundTint="@color/theme2_1"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:srcCompat="@android:drawable/ic_popup_sync" />
+
 
     <LinearLayout
         android:id="@+id/linearLayout"
