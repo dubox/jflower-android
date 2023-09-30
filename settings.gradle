@@ -14,5 +14,8 @@ dependencyResolutionManagement {
     }
 }
 
+
 rootProject.name = "jFlower"
 include ':app'
+include ':AnnotationModule'
+include ':APTModule'

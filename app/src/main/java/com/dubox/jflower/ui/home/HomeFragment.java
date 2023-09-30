@@ -36,16 +36,16 @@ public class HomeFragment extends Fragment {
     int gray;
     int theme2_1;
 
+    HomeViewModel homeViewModel;
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        HomeViewModel homeViewModel =
-                new ViewModelProvider(this).get(HomeViewModel.class);
+        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
 
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
         Log.i("home","sssassssss");
-//        final TextView textView = binding.textHome;
-//        homeViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
+        homeViewModel.getMyIp().observe(getViewLifecycleOwner(), binding.myIp::setText);
         mainActivity = (MainActivity)getActivity();
         gray = getResources().getColor(R.color.gray , mainActivity.getTheme());
         theme2_1 = getResources().getColor(R.color.theme2_1 , mainActivity.getTheme());
@@ -69,6 +69,7 @@ public class HomeFragment extends Fragment {
                 switchShareFab();
             }
         });
+        showLocalIp();
     }
 
     public void initShareFab(){
@@ -113,7 +114,14 @@ public class HomeFragment extends Fragment {
             }
 
         });
+        showLocalIp();
+    }
 
+    public void showLocalIp(){
+        homeViewModel.setMyIp(mainActivity.getLocalIp());
+        if(mainActivity.getLocalIp().equals("")){
+            homeViewModel.setMyIp("err");
+        }
     }
 
     @Override

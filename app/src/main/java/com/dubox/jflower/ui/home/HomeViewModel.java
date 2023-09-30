@@ -6,14 +6,18 @@ import androidx.lifecycle.ViewModel;
 
 public class HomeViewModel extends ViewModel {
 
-    private final MutableLiveData<String> mText;
+    private final MutableLiveData<String> myIp;
 
     public HomeViewModel() {
-        mText = new MutableLiveData<>();
-        mText.setValue("This is home fragment");
+        myIp = new MutableLiveData<>();
+        myIp.setValue("Serving At: 192.168.?.?");
     }
 
-    public LiveData<String> getText() {
-        return mText;
+    public LiveData<String> getMyIp() {
+        return myIp;
+    }
+
+    public void setMyIp(String v){
+        myIp.setValue("Serving At: "+ v);
     }
 }

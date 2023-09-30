@@ -11,6 +11,8 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/APTModule" />
+            <option value="$PROJECT_DIR$/AnnotationModule" />
             <option value="$PROJECT_DIR$/app" />
           </set>
         </option>

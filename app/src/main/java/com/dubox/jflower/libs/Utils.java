@@ -3,13 +3,25 @@ package com.dubox.jflower.libs;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.net.Uri;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
+import android.widget.Toast;
 
 import com.dubox.jflower.libs.utilsTrait.Net;
+import com.koushikdutta.async.http.AsyncHttpClient;
+import com.koushikdutta.async.http.AsyncHttpRequest;
+import com.koushikdutta.async.http.AsyncHttpResponse;
+import com.koushikdutta.async.http.body.MultipartFormDataBody;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -163,5 +175,68 @@ public class Utils implements Net {
         };
         cm.set(matrix);
         return new ColorMatrixColorFilter(cm);
+    }
+
+    public static PackageInfo getPackageInfo(){
+        PackageManager manager = ActivityManager.getTopActivity().getPackageManager();
+
+        try {
+            return manager.getPackageInfo(ActivityManager.getTopActivity().getPackageName(), 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static void getNewVersion(String currVersion ,MyCallback cb){
+        //
+//        System.out.println(View.);
+        MultipartFormDataBody body = new MultipartFormDataBody();
+        body.addStringPart("_api_key","f8e52a2bef403133435ebdea173348b7");
+        body.addStringPart("appKey","cb656120c79a59a65541ff817577a29b");
+        body.addStringPart("buildVersion",currVersion);
+
+        AsyncHttpRequest req = new AsyncHttpRequest(
+                Uri.parse(
+//                        "https://gitee.com/dubox/jflower-android/raw/master/version.json"
+//                        "https://raw.githubusercontent.com/dubox/jflower-android/master/version.json"
+//                        "https://dubox.github.io/jflower-android/version.json"
+                        "https://www.pgyer.com/apiv2/app/check"
+                ), "POST");
+        req.setBody(body);
+        AsyncHttpClient.getDefaultInstance().executeJSONObject(req, new AsyncHttpClient.JSONObjectCallback() {
+
+            // Callback is invoked with any exceptions/errors, and the result, if available.
+            @Override
+            public void onCompleted(Exception e, AsyncHttpResponse response, JSONObject result) {
+                new Thread(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        // TODO Auto-generated method stub
+                        Looper.prepare();
+                        if (e != null) {
+                            System.out.println(e.toString());
+                            //e.printStackTrace();
+                            Toast.makeText(ActivityManager.getTopActivity(),"网络异常，请稍后重试",Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        System.out.println("I got a JSONObject: " + result);
+                        try {
+                            if((int)result.get("code") != 0){
+                                Toast.makeText(ActivityManager.getTopActivity(),(String)result.get("message"),Toast.LENGTH_LONG).show();
+                                return;
+                            }
+                            JSONObject data = (JSONObject) result.get("data");
+                            cb.onNewVersion(data);
+                        } catch (JSONException ex) {
+                            ex.printStackTrace();
+                        }
+                        Looper.loop();
+                    }
+                }).start();
+
+            }
+        });
     }
 }

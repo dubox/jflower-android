@@ -22,6 +22,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.dubox.jflower.MainActivity;
 import com.dubox.jflower.databinding.FragmentGalleryBinding;
+import com.dubox.jflower.libs.MyCallback;
+import com.dubox.jflower.libs.Utils;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.koushikdutta.async.http.AsyncHttpRequest;
 import com.koushikdutta.async.http.AsyncHttpResponse;
@@ -47,12 +49,9 @@ public class GalleryFragment extends Fragment {
         binding = FragmentGalleryBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        final TextView textView = binding.textGallery;
-        final TextView newV = binding.newV;
-        final Button upBtn = binding.button;
-        galleryViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
-        galleryViewModel.getNewV().observe(getViewLifecycleOwner(), newV::setText);
-        galleryViewModel.getBtnShow().observe(getViewLifecycleOwner(), upBtn::setVisibility);
+        galleryViewModel.getText().observe(getViewLifecycleOwner(), binding.textGallery::setText);
+        galleryViewModel.getNewV().observe(getViewLifecycleOwner(), binding.newV::setText);
+        galleryViewModel.getBtnShow().observe(getViewLifecycleOwner(), binding.button::setVisibility);
 
         this.setV();
         this.getNewV();
@@ -68,69 +67,22 @@ public class GalleryFragment extends Fragment {
 
 
     protected void setV(){
-        PackageManager manager = mainActivity.getPackageManager();
-
-        try {
-            pInfo = manager.getPackageInfo(mainActivity.getPackageName(), 0);
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
+        pInfo = Utils.getPackageInfo();
+        if(pInfo == null)return;
         String version = pInfo.versionName;
         galleryViewModel.setV(version);
     }
 
     protected void getNewV(){
-        //
-//        System.out.println(View.);
-        MultipartFormDataBody body = new MultipartFormDataBody();
-        body.addStringPart("_api_key","f8e52a2bef403133435ebdea173348b7");
-        body.addStringPart("appKey","cb656120c79a59a65541ff817577a29b");
-        body.addStringPart("buildVersion",pInfo.versionName);
-
-        AsyncHttpRequest req = new AsyncHttpRequest(
-                Uri.parse(
-//                        "https://gitee.com/dubox/jflower-android/raw/master/version.json"
-//                        "https://raw.githubusercontent.com/dubox/jflower-android/master/version.json"
-//                        "https://dubox.github.io/jflower-android/version.json"
-                        "https://www.pgyer.com/apiv2/app/check"
-                ), "POST");
-        req.setBody(body);
-        AsyncHttpClient.getDefaultInstance().executeJSONObject(req, new AsyncHttpClient.JSONObjectCallback() {
-
-            // Callback is invoked with any exceptions/errors, and the result, if available.
+        Utils.getNewVersion(pInfo.versionName, new MyCallback() {
             @Override
-            public void onCompleted(Exception e, AsyncHttpResponse response, JSONObject result) {
-                new Thread(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        // TODO Auto-generated method stub
-                        Looper.prepare();
-                        if (e != null) {
-                            System.out.println(e.toString());
-                            //e.printStackTrace();
-                            Toast.makeText(getContext(),"网络异常，请稍后重试",Toast.LENGTH_LONG).show();
-                            return;
-                        }
-                        System.out.println("I got a JSONObject: " + result);
-                        try {
-                            if((int)result.get("code") != 0){
-                                Toast.makeText(getContext(),(String)result.get("message"),Toast.LENGTH_LONG).show();
-                                return;
-                            }
-                            JSONObject data = (JSONObject) result.get("data");
-                            galleryViewModel.setNewV((String) data.get("buildVersion"));
-                            galleryViewModel.setBtnShow((boolean)data.get("buildHaveNewVersion"));
-                        } catch (JSONException ex) {
-                            ex.printStackTrace();
-                        }
-                        Looper.loop();
-                    }
-                }).start();
-
+            public void onNewVersion(JSONObject data) throws JSONException {
+                    galleryViewModel.setNewV((String) data.get("buildVersion"));
+                    galleryViewModel.setBtnShow((boolean)data.get("buildHaveNewVersion"));
             }
         });
     }
+
 
 
 }

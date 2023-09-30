@@ -16,6 +16,8 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.Icon;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -47,6 +49,7 @@ import org.greenrobot.eventbus.EventBus;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,8 +69,7 @@ import androidx.appcompat.widget.ThemeUtils;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.FileProvider;
 
-
-public class HttpService extends Service {
+public class HttpService extends Service{
 
     private static final int NOTIFICATION_ID = 1;
     AsyncHttpServer server = new AsyncHttpServer();
@@ -82,16 +84,41 @@ public class HttpService extends Service {
 
     private static final String SHARE_ROOT_DIR = Environment.getExternalStorageDirectory().getAbsolutePath();
 
+    MediaPlayer mediaplayer=null;
+
+
     public HttpService() {
-
         EventBus.getDefault().register(new MySubscriber());
-
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         // TODO: Return the communication channel to the service.
         throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    private void playAudio(){
+        if(mediaplayer==null){
+            new Thread(new Runnable(){
+                @Override
+                public void run() {
+                        mediaplayer=MediaPlayer.create(HttpService.this, R.raw.muted);
+                        mediaplayer.setLooping(true);
+//                        mediaplayer.prepareAsync ();//异步准备播放 这部必须设置不然无法播放
+                    mediaplayer.start();
+                }
+            }).start();
+
+        }
+    }
+
+
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        startServer();
+        playAudio();
     }
 
 
@@ -117,15 +144,18 @@ public class HttpService extends Service {
 
         Log.i("notification", "ok");
         // Notification ID cannot be 0.
-        startForeground(NOTIFICATION_ID, builder.build());
-        startServer();
+
+
         notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         // If we get killed, after returning from here, restart
 //        return super.onStartCommand(intent,flags,startId);
         serviceIsLive = true;
+        startForeground(NOTIFICATION_ID, builder.build());
         return START_STICKY;
     }
+
+
 
     public Uri uriToPrivate(Uri uri){
         File imageFile = null;
@@ -249,6 +279,9 @@ public class HttpService extends Service {
         // 移除通知
         stopForeground(true);
         EventBus.getDefault().unregister(new MySubscriber());
+        //音频
+        mediaplayer.stop();
+        mediaplayer=null;
         super.onDestroy();
     }
 
@@ -345,7 +378,7 @@ public class HttpService extends Service {
                                 .setContentTitle("来自："+name)
                                 .setSubText(ip)
                                 .clearActions()
-                                .setLargeIcon(null)
+                                .setLargeIcon(Icon.createWithResource(HttpService.this,R.drawable.logo))
                                 .setWhen(System.currentTimeMillis())
                                 .addAction(textAction(res));
                         if(res.startsWith("https://") || res.startsWith("http://")){
@@ -401,7 +434,7 @@ public class HttpService extends Service {
                                 .setContentTitle("来自："+name)
                                 .setSubText(ip)
                                 .clearActions()
-                                .setLargeIcon(null)
+                                .setLargeIcon(Icon.createWithResource(HttpService.this,R.drawable.logo))
                                 .setWhen(System.currentTimeMillis())
                                 .addAction(fileAction(ip,request.getHeaders().get("key") ,fileName ,name));
 

@@ -35,7 +35,7 @@ public class MyApplication extends Application {
 
             @Override
             public void onActivityStopped(Activity activity) {
-                ActivityManager.setTopActivity(null);
+//                ActivityManager.setTopActivity(null);
             }
 
             @Override

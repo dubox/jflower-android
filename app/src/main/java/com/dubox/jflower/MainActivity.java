@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -28,8 +29,10 @@ import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
 import com.dubox.jflower.libs.ClipBoardUtil;
+import com.dubox.jflower.libs.MyCallback;
 import com.dubox.jflower.libs.Utils;
 import com.dubox.jflower.libs.utilsTrait.Net;
+import com.dubox.jflower.ui.slideshow.SlideshowFragment;
 import com.google.android.material.navigation.NavigationView;
 
 import androidx.annotation.RequiresApi;
@@ -51,6 +54,9 @@ import com.koushikdutta.async.http.WebSocket;
 import com.koushikdutta.async.http.body.AsyncHttpRequestBody;
 import com.koushikdutta.async.http.body.StreamBody;
 import com.koushikdutta.async.http.body.StringBody;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -91,6 +97,8 @@ public class MainActivity extends AppCompatActivity {
     public enum SharingType {TEXT,IMAGE,NONE;}
     public SharingType sharingType = SharingType.NONE;
     private boolean deviceListCleared = true;
+
+    SlideshowFragment slideshowFragment = (SlideshowFragment) getSupportFragmentManager().findFragmentById(R.id.nav_slideshow);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -157,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
 
         initHandler();
 
-
+        getNewV();
     }
 
     public void checkPermission(){
@@ -401,6 +409,7 @@ public class MainActivity extends AppCompatActivity {
 
     void freshIp(){
         Log.i("ip", localIp = Net.localIp(this));
+
     }
 
     protected void handleShare(){
@@ -488,6 +497,20 @@ Log.i("img_path",img_path);
             freshIp();
         }
         return localIp;
+    }
+
+    protected void getNewV(){
+       PackageInfo pInfo = Utils.getPackageInfo();
+        if(pInfo == null)return;
+        Utils.getNewVersion(pInfo.versionName, new MyCallback() {
+            @Override
+            public void onNewVersion(JSONObject data) throws JSONException {
+                if((boolean)data.get("buildHaveNewVersion")){
+                    System.out.println("发现新版本");
+                    Toast.makeText(MainActivity.this,"发现新版本",Toast.LENGTH_LONG).show();
+                }
+            }
+        });
     }
 
 

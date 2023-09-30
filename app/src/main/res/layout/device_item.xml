@@ -8,10 +8,13 @@
 
 
     <androidx.cardview.widget.CardView
-        android:layout_width="400dp"
+        android:layout_width="match_parent"
         android:layout_height="55dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="5dp"
         android:alpha="0.7"
-        android:orientation="horizontal"
         app:cardBackgroundColor="#F5F1FF"
         app:cardCornerRadius="10dp"
         app:cardElevation="3dp"
@@ -20,15 +23,21 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/device_name"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="10dp"
-            android:gravity="center|top"
-            android:text="name"
-            android:textAlignment="center"
-            android:textSize="16dp" />
+        <Button
+            android:id="@+id/openSharePage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginEnd="25dp"
+            android:background="#00FFFFFF"
+            android:drawablePadding="0dp"
+            android:gravity="center_horizontal|center_vertical"
+            android:onClick="openSharePage"
+            android:outlineProvider="none"
+            android:textSize="0sp"
+            app:icon="@android:drawable/ic_menu_set_as"
+            app:iconGravity="textTop"
+            app:iconTint="@color/purple_200" />
 
         <TextView
             android:id="@+id/device_sub_name"
@@ -41,21 +50,16 @@
             android:textColor="#979797"
             android:textSize="14dp" />
 
-        <Button
-            android:id="@+id/openSharePage"
-            android:onClick="openSharePage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginEnd="25dp"
-            android:background="#00FFFFFF"
-            android:drawablePadding="0dp"
-            android:gravity="center_horizontal|center_vertical"
-            android:outlineProvider="none"
-            android:textSize="0sp"
-            app:icon="@android:drawable/ic_menu_set_as"
-            app:iconGravity="textTop"
-            app:iconTint="@color/purple_200" />
+        <TextView
+            android:id="@+id/device_name"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="10dp"
+            android:gravity="center|top"
+            android:text="name"
+            android:textAlignment="center"
+            android:textSize="16dp" />
     </androidx.cardview.widget.CardView>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
