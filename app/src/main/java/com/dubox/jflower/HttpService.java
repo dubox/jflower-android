@@ -18,6 +18,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Icon;
 import android.media.MediaPlayer;
+import android.media.TimedMetaData;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -34,6 +35,9 @@ import com.koushikdutta.async.ByteBufferList;
 import com.koushikdutta.async.DataEmitter;
 import com.koushikdutta.async.callback.CompletedCallback;
 import com.koushikdutta.async.callback.DataCallback;
+import com.koushikdutta.async.http.AsyncHttpClient;
+import com.koushikdutta.async.http.AsyncHttpRequest;
+import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.koushikdutta.async.http.Multimap;
 import com.koushikdutta.async.http.WebSocket;
 import com.koushikdutta.async.http.body.AsyncHttpRequestBody;
@@ -62,6 +66,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import androidx.annotation.RequiresApi;
@@ -99,15 +104,33 @@ public class HttpService extends Service{
 
     private void playAudio(){
         if(mediaplayer==null){
-            new Thread(new Runnable(){
-                @Override
-                public void run() {
-                        mediaplayer=MediaPlayer.create(HttpService.this, R.raw.muted);
+            mediaplayer=MediaPlayer.create(HttpService.this, R.raw.muted);
                         mediaplayer.setLooping(true);
 //                        mediaplayer.prepareAsync ();//异步准备播放 这部必须设置不然无法播放
-                    mediaplayer.start();
+
+            mediaplayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mediaPlayer) {
+                    Log.i("MediaPlayer","onCompletion");
+//                    Toast.makeText(HttpService.this,"onCompletion",Toast.LENGTH_SHORT).show();
+//                    mediaplayer.start();
+//                    String uri = String.format("http://%s:8891", Net.localIp(HttpService.this));
+//
+//                    AsyncHttpClient.getDefaultInstance().executeString(new AsyncHttpRequest(Uri.parse(uri), "GET")
+//                            .setTimeout(1000), new AsyncHttpClient.StringCallback() {
+//                        @Override
+//                        public void onCompleted(Exception e, AsyncHttpResponse response, String result) {
+//                            Log.i("AsyncHttpClient", "onCompleted");
+//                            if (e != null ) {
+//                                return;
+//                            }
+//                            Log.i("result", result);
+//
+//                        }
+//                    });
                 }
-            }).start();
+            });
+            mediaplayer.start();
 
         }
     }
@@ -118,7 +141,7 @@ public class HttpService extends Service{
     public void onCreate() {
         super.onCreate();
         startServer();
-        playAudio();
+//        playAudio();
     }
 
 
