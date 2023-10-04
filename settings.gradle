@@ -11,6 +11,8 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
+        maven { url "https://frontjs-static.pgyer.com/dist/sdk/pgyersdk" }  //蒲公英主力仓库
+        maven { url "https://raw.githubusercontent.com/PGYER/analytics/master" }  //蒲公英备用仓库（主力仓库下载不下来使用）
     }
 }
 

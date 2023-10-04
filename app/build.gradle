@@ -12,7 +12,7 @@ android {
         applicationId "com.dubox.jflower"
         minSdk 24
         targetSdk 34
-        versionCode 3
+        versionCode 4
         versionName "1.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -57,4 +57,5 @@ dependencies {
     implementation 'com.github.tyhjh:PermissionUtil:v1.0.7'
     implementation 'org.greenrobot:eventbus:3.2.0'
     implementation 'commons-io:commons-io:2.8.0'
+    implementation 'com.pgyer:analytics:4.+'//最好写上具体依赖的版本号 如：4.2.1
 }

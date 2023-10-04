@@ -80,6 +80,17 @@
         <meta-data
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />
+
+        <meta-data
+            android:name="PGYER_API_KEY"
+            android:value="f8e52a2bef403133435ebdea173348b7"/>
+        <meta-data
+            android:name="PGYER_FRONTJS_KEY"
+            android:value="b5be716df113fab914678a8cf8bc6915"/>
+        <!-- 添加新版本检测 -->
+        <meta-data
+            android:name="PGYER_FEATURE_CHECK_UNPDATE"
+            android:value="true" />
     </application>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -93,6 +104,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="com.huawei.permission.external_app_settings.USE_COMPONENT"/>
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
 
     <queries>

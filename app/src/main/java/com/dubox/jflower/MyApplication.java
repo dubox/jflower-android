@@ -5,6 +5,8 @@ import android.app.Application;
 import android.os.Bundle;
 
 import com.dubox.jflower.libs.ActivityManager;
+import com.pgyer.pgyersdk.PgyerSDKManager;
+import com.pgyer.pgyersdk.pgyerenum.Features;
 
 
 public class MyApplication extends Application {
@@ -48,5 +50,19 @@ public class MyApplication extends Application {
 
             }
         });
+
+        initPgyerSDK(this);
+    }
+
+
+    /**
+     *  初始化蒲公英SDK
+     * @param application
+     */
+    private static void initPgyerSDK( MyApplication application){
+        new PgyerSDKManager.Init()
+                .setContext(application) //设置上下问对象
+                .enable(Features.CHECK_UPDATE)//开启自动更新检测（不设置默认功能关闭 ，AndroidManifest中也可以设置该属性的开关）
+                .start();
     }
 }
